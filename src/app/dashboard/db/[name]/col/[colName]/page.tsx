@@ -142,17 +142,25 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                             <table className="w-full text-[11px] text-left border-collapse whitespace-nowrap">
                                 <thead className="bg-[#fcfcfc] border-b border-gray-200">
                                     <tr>
-                                        <th className="px-3 py-2 border-r border-gray-200 w-24 text-center uppercase text-[10px] italic font-normal text-gray-500">Options</th>
                                         <th className="px-3 py-2 border-r border-gray-200 font-bold text-blue-800">_id</th>
                                         {columns.map(col => (
                                             <th key={col} className="px-3 py-2 border-r border-gray-200 font-bold text-blue-800">{col}</th>
                                         ))}
+                                        <th className="px-3 py-2 w-24 text-center uppercase text-[10px] italic font-normal text-gray-500">Options</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {docs.map((doc, i) => (
                                         <tr key={doc._id || i} className="hover:bg-[#f9f9f9]">
-                                            <td className="px-3 py-2 border-r border-gray-200 text-center space-x-2">
+                                            <td className="px-3 py-2 border-r border-gray-200 font-mono text-gray-500">
+                                                {doc._id}
+                                            </td>
+                                            {columns.map(col => (
+                                                <td key={col} className="px-3 py-2 border-r border-gray-200 font-mono">
+                                                    {typeof doc[col] === 'object' ? JSON.stringify(doc[col]) : String(doc[col] ?? '')}
+                                                </td>
+                                            ))}
+                                            <td className="px-3 py-2 text-center space-x-2">
                                                 <button
                                                     onClick={() => handleEdit(doc)}
                                                     className="text-blue-600 hover:underline inline-flex items-center gap-0.5"
@@ -166,14 +174,6 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                                                     <Trash2 className="h-3 w-3" /> Delete
                                                 </button>
                                             </td>
-                                            <td className="px-3 py-2 border-r border-gray-200 font-mono text-gray-500">
-                                                {doc._id}
-                                            </td>
-                                            {columns.map(col => (
-                                                <td key={col} className="px-3 py-2 border-r border-gray-200 font-mono">
-                                                    {typeof doc[col] === 'object' ? JSON.stringify(doc[col]) : String(doc[col] ?? '')}
-                                                </td>
-                                            ))}
                                         </tr>
                                     ))}
                                 </tbody>

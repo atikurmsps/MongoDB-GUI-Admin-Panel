@@ -58,6 +58,35 @@ export default function Dashboard() {
         }
     };
 
+    const [deleteDbName, setDeleteDbName] = useState<string | null>(null);
+    const [confirmName, setConfirmName] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteDb = async () => {
+        if (confirmName !== deleteDbName) return;
+        setIsDeleting(true);
+        try {
+            const res = await fetch('/api/mongodb/databases/delete', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: deleteDbName }),
+            });
+
+            if (res.ok) {
+                setDeleteDbName(null);
+                setConfirmName('');
+                fetchDatabases();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to delete database');
+            }
+        } catch (err) {
+            alert('Connection error');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     useEffect(() => {
         fetchDatabases();
     }, []);
@@ -99,7 +128,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="pma-panel rounded-sm overflow-hidden">
+                        <div className="pma-panel rounded-sm overflow-hidden text-[#555]">
                             <table className="w-full text-xs text-left border-collapse">
                                 <thead className="bg-[#f2f2f2] border-b border-gray-300">
                                     <tr>
@@ -109,6 +138,7 @@ export default function Dashboard() {
                                         <th className="px-3 py-2 border-r border-gray-300 font-bold">Database</th>
                                         <th className="px-3 py-2 border-r border-gray-300 font-bold">Collation</th>
                                         <th className="px-3 py-2 border-r border-gray-300 font-bold">Size</th>
+                                        <th className="px-3 py-2 border-r border-gray-300 font-bold">User accounts</th>
                                         <th className="px-3 py-2 font-bold">Action</th>
                                     </tr>
                                 </thead>
@@ -125,8 +155,18 @@ export default function Dashboard() {
                                             </td>
                                             <td className="px-3 py-2 border-r border-gray-300 text-gray-500 italic">utf8mb4_general_ci</td>
                                             <td className="px-3 py-2 border-r border-gray-300">{(db.sizeOnDisk / (1024 * 1024)).toFixed(2)} MB</td>
-                                            <td className="px-3 py-2 space-x-4">
-                                                <Link href={`/dashboard/db/${db.name}/users`} className="text-blue-700 hover:underline">User accounts</Link>
+                                            <td className="px-3 py-2 border-r border-gray-300">
+                                                <Link href={`/dashboard/db/${db.name}/users`} className="text-[#235a81] hover:underline flex items-center gap-1">
+                                                    User accounts
+                                                </Link>
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                <button
+                                                    onClick={() => setDeleteDbName(db.name)}
+                                                    className="text-red-700 hover:underline flex items-center gap-1"
+                                                >
+                                                    <Trash2 className="h-3 w-3" /> Drop
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
@@ -137,6 +177,51 @@ export default function Dashboard() {
                             </div>
                         </div>
                     </div>
+
+                    {/* Delete Confirmation Modal */}
+                    {deleteDbName && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-400/30 backdrop-blur-[1px]">
+                            <div className="bg-white rounded p-6 max-w-sm w-full shadow-2xl border border-gray-300">
+                                <h2 className="text-lg font-bold mb-4 text-red-600">Drop Database</h2>
+                                <p className="text-sm text-gray-600 mb-6">
+                                    Are you sure you want to drop database <strong>{deleteDbName}</strong>? This action cannot be undone.
+                                </p>
+
+                                <div className="mb-6">
+                                    <label className="block text-xs text-gray-500 mb-2">
+                                        Please type <strong>{deleteDbName}</strong> to confirm:
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={confirmName}
+                                        onChange={(e) => setConfirmName(e.target.value)}
+                                        placeholder="Database name"
+                                        className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-red-400"
+                                    />
+                                </div>
+
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        onClick={() => {
+                                            setDeleteDbName(null);
+                                            setConfirmName('');
+                                        }}
+                                        className="px-4 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-100"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleDeleteDb}
+                                        disabled={confirmName !== deleteDbName || isDeleting}
+                                        className="px-4 py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 flex items-center gap-1"
+                                    >
+                                        {isDeleting && <Loader2 className="h-3 w-3 animate-spin" />}
+                                        Drop Database
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </main>
             </div>
         </div>
