@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Database, Folder, ChevronRight, ChevronDown, Plus, Home, LogOut } from 'lucide-react';
+import { Database, Folder, ChevronRight, ChevronDown, Plus, Home, LogOut, Link2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface DbInfo {
@@ -79,6 +79,13 @@ export default function Sidebar() {
                 >
                     <Home className="h-3.5 w-3.5" />
                     (Root) /
+                </Link>
+                <Link
+                    href="/dashboard/connection-checker"
+                    className={`flex items-center gap-1.5 px-2 py-1 text-xs transition-colors ${pathname === '/dashboard/connection-checker' ? 'bg-white font-bold text-blue-700' : 'text-gray-700 hover:bg-gray-200'}`}
+                >
+                    <Link2 className="h-3.5 w-3.5 text-gray-400" />
+                    Connection Tester
                 </Link>
                 <div className="mt-1 flex flex-col">
                     {databases.map((db) => (
