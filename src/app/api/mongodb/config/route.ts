@@ -5,17 +5,21 @@ export async function GET() {
 
     try {
         const url = new URL(fullUri);
-        // Remove auth if present for the template
-        url.username = '';
-        url.password = '';
+        const protocol = url.protocol.replace(':', '');
+        const host = url.host;
+        const options = url.search || '';
 
         return NextResponse.json({
-            baseUri: url.toString().replace(/\/$/, '') // Remove trailing slash
+            protocol,
+            host,
+            options
         });
     } catch (e) {
-        // If URL parsing fails (e.g. simple string), just return it
+        // Fallback for simple strings or invalid URLs
         return NextResponse.json({
-            baseUri: fullUri.split('@').pop() || fullUri
+            protocol: 'mongodb',
+            host: fullUri.split('@').pop()?.split('/')[0] || 'localhost:27017',
+            options: ''
         });
     }
 }

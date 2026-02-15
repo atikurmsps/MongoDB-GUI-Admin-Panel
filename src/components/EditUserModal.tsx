@@ -26,7 +26,11 @@ export default function EditUserModal({ dbName, user, open, onOpenChange, onSave
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [baseUri, setBaseUri] = useState('mongodb://localhost:27017');
+    const [config, setConfig] = useState<{ protocol: string; host: string; options: string }>({
+        protocol: 'mongodb',
+        host: 'localhost:27017',
+        options: ''
+    });
     const [copied, setCopied] = useState(false);
 
     useEffect(() => {
@@ -34,7 +38,7 @@ export default function EditUserModal({ dbName, user, open, onOpenChange, onSave
             try {
                 const res = await fetch('/api/mongodb/config');
                 const data = await res.json();
-                setBaseUri(data.baseUri);
+                setConfig(data);
             } catch (err) { }
         };
         fetchConfig();
@@ -50,10 +54,8 @@ export default function EditUserModal({ dbName, user, open, onOpenChange, onSave
     const getUri = () => {
         if (!user) return '';
         const pwd = password || '[password]';
-        const parts = baseUri.split('://');
-        const protocol = parts[0];
-        const host = parts[1];
-        return `${protocol}://${user.user}:${pwd}@${host}/${dbName}`;
+        const { protocol, host, options } = config;
+        return `${protocol}://${user.user}:${pwd}@${host}/${dbName}${options}`;
     };
 
     const toggleRole = (role: string) => {

@@ -20,7 +20,11 @@ export default function CreateUserModal({ dbName, onCreated }: { dbName: string,
     const [selectedRoles, setSelectedRoles] = useState<string[]>(['readWrite']);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [baseUri, setBaseUri] = useState('mongodb://localhost:27017');
+    const [config, setConfig] = useState<{ protocol: string; host: string; options: string }>({
+        protocol: 'mongodb',
+        host: 'localhost:27017',
+        options: ''
+    });
     const [copied, setCopied] = useState(false);
 
     useState(() => {
@@ -28,7 +32,7 @@ export default function CreateUserModal({ dbName, onCreated }: { dbName: string,
             try {
                 const res = await fetch('/api/mongodb/config');
                 const data = await res.json();
-                setBaseUri(data.baseUri);
+                setConfig(data);
             } catch (err) { }
         };
         fetchConfig();
@@ -37,10 +41,8 @@ export default function CreateUserModal({ dbName, onCreated }: { dbName: string,
     const getUri = () => {
         const userStr = username || '[username]';
         const pwd = password || '[password]';
-        const parts = baseUri.split('://');
-        const protocol = parts[0];
-        const host = parts[1];
-        return `${protocol}://${userStr}:${pwd}@${host}/${dbName}`;
+        const { protocol, host, options } = config;
+        return `${protocol}://${userStr}:${pwd}@${host}/${dbName}${options}`;
     };
 
     const handleCopy = () => {

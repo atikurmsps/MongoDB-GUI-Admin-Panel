@@ -21,7 +21,11 @@ export default function DbUsersPage({ params }: { params: Promise<{ name: string
 
     const [editingUser, setEditingUser] = useState<any | null>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
-    const [baseUri, setBaseUri] = useState('mongodb://localhost:27017');
+    const [config, setConfig] = useState<{ protocol: string; host: string; options: string }>({
+        protocol: 'mongodb',
+        host: 'localhost:27017',
+        options: ''
+    });
     const [passwords, setPasswords] = useState<Record<string, string>>({});
 
     const fetchUsers = async () => {
@@ -40,7 +44,7 @@ export default function DbUsersPage({ params }: { params: Promise<{ name: string
         try {
             const res = await fetch('/api/mongodb/config');
             const data = await res.json();
-            setBaseUri(data.baseUri);
+            setConfig(data);
         } catch (err) {
             console.error('Failed to fetch config');
         }
@@ -78,11 +82,8 @@ export default function DbUsersPage({ params }: { params: Promise<{ name: string
 
     const getUri = (username: string) => {
         const password = passwords[username] || '[password]';
-        // baseUri is like mongodb://localhost:27017
-        const parts = baseUri.split('://');
-        const protocol = parts[0];
-        const host = parts[1];
-        return `${protocol}://${username}:${password}@${host}/${dbName}`;
+        const { protocol, host, options } = config;
+        return `${protocol}://${username}:${password}@${host}/${dbName}${options}`;
     };
 
     const handlePasswordChange = (username: string, value: string) => {
