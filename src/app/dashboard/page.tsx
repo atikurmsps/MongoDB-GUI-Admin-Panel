@@ -14,16 +14,47 @@ interface DbInfo {
 export default function Dashboard() {
     const [databases, setDatabases] = useState<DbInfo[]>([]);
     const [loading, setLoading] = useState(true);
+    const [newDbName, setNewDbName] = useState('');
+    const [createLoading, setCreateLoading] = useState(false);
+    const [createError, setCreateError] = useState('');
 
     const fetchDatabases = async () => {
         try {
             const res = await fetch('/api/mongodb/databases');
             const data = await res.json();
-            setDatabases(data);
+            if (Array.isArray(data)) {
+                setDatabases(data);
+            }
         } catch (err) {
             console.error('Failed to fetch databases');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCreateDb = async () => {
+        if (!newDbName.trim()) return;
+        setCreateLoading(true);
+        setCreateError('');
+
+        try {
+            const res = await fetch('/api/mongodb/databases', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newDbName }),
+            });
+
+            if (res.ok) {
+                setNewDbName('');
+                fetchDatabases();
+            } else {
+                const data = await res.json();
+                setCreateError(data.error || 'Failed to create database');
+            }
+        } catch (err) {
+            setCreateError('Connection error');
+        } finally {
+            setCreateLoading(false);
         }
     };
 
@@ -41,17 +72,30 @@ export default function Dashboard() {
                         <h1 className="text-xl font-normal text-gray-800 border-b border-gray-300 pb-2 mb-4">Databases</h1>
 
                         <div className="pma-panel rounded-sm mb-6 p-4">
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2 text-xs">
-                                    <Database className="h-4 w-4 text-gray-500" />
-                                    Create database
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <Database className="h-4 w-4 text-gray-500" />
+                                        Create database
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Database name"
+                                        value={newDbName}
+                                        onChange={(e) => setNewDbName(e.target.value)}
+                                        className="border border-gray-300 rounded px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-400"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleCreateDb()}
+                                    />
+                                    <button
+                                        onClick={handleCreateDb}
+                                        disabled={createLoading || !newDbName.trim()}
+                                        className="bg-gray-200 px-3 py-1 text-xs border border-gray-400 rounded hover:bg-gray-300 disabled:opacity-50 flex items-center gap-1"
+                                    >
+                                        {createLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                                        Create
+                                    </button>
                                 </div>
-                                <input
-                                    type="text"
-                                    placeholder="Database name"
-                                    className="border border-gray-300 rounded px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-400"
-                                />
-                                <button className="bg-gray-200 px-3 py-1 text-xs border border-gray-400 rounded hover:bg-gray-300">Create</button>
+                                {createError && <p className="text-[10px] text-red-600 ml-2">{createError}</p>}
                             </div>
                         </div>
 
