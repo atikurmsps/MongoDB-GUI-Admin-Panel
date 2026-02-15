@@ -17,15 +17,36 @@ export async function POST(req: NextRequest) {
         });
 
         await client.connect();
+
+        // Use a simple ping command which requires minimal permissions
         const adminDb = client.db().admin();
-        const info = await adminDb.serverStatus();
-        const buildInfo = await adminDb.buildInfo();
+        await adminDb.command({ ping: 1 });
+
+        let version = 'Unknown';
+        let uptime = 'Unknown';
+        let isAdmin = false;
+
+        try {
+            // Attempt to get extra info if permissions allow
+            const buildInfo = await adminDb.buildInfo();
+            version = buildInfo.version;
+
+            const status = await adminDb.serverStatus();
+            uptime = status.uptime;
+            isAdmin = true;
+        } catch (e) {
+            // Silently fail if unauthorized for admin commands
+            console.log('Optional admin info gathering failed (unauthorized)');
+        }
 
         return NextResponse.json({
             success: true,
-            version: buildInfo.version,
-            uptime: info.uptime,
-            message: 'Successfully connected to MongoDB server.',
+            version,
+            uptime,
+            isAdmin,
+            message: isAdmin
+                ? 'Successfully connected to MongoDB server with administrative access.'
+                : 'Successfully connected to MongoDB server (Limited permissions).',
         });
 
     } catch (error) {
