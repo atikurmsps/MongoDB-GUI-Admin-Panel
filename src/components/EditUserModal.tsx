@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Loader2, Check, Copy, Edit, ShieldCheck, ShieldAlert, Settings2 } from 'lucide-react';
+import { X, Loader2, Check, Copy, Edit, ShieldCheck, ShieldAlert, Settings2, RefreshCw } from 'lucide-react';
 
 const AVAILABLE_ROLES = [
     'read',
@@ -100,6 +100,15 @@ export default function EditUserModal({ dbName, user, open, onOpenChange, onSave
         );
     };
 
+    const generatePassword = () => {
+        const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let retVal = '';
+        for (let i = 0, n = charset.length; i < 25; ++i) {
+            retVal += charset.charAt(Math.floor(Math.random() * n));
+        }
+        setPassword(retVal);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -155,14 +164,23 @@ export default function EditUserModal({ dbName, user, open, onOpenChange, onSave
                                     {/* Security - Password Change */}
                                     <div className="flex items-center gap-4">
                                         <label className="w-1/4 text-[12px] font-normal text-gray-700 text-right">Change Password:</label>
-                                        <div className="w-3/4">
+                                        <div className="w-3/4 flex gap-2">
                                             <input
                                                 type="text"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
-                                                className="w-full border border-gray-400 rounded-sm px-2 py-1 text-sm outline-none focus:bg-white bg-white shadow-sm"
+                                                className="flex-1 border border-gray-400 rounded-sm px-2 py-1 text-sm outline-none focus:bg-white bg-white shadow-sm"
                                                 placeholder="Leave blank to keep current"
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={generatePassword}
+                                                className="px-2 py-1 bg-gray-100 border border-gray-400 rounded-sm hover:bg-white text-gray-600 transition-colors shadow-sm flex items-center gap-1 text-[11px] font-medium"
+                                                title="Generate URI friendly password"
+                                            >
+                                                <RefreshCw className="h-3 w-3" />
+                                                Generate
+                                            </button>
                                         </div>
                                     </div>
 
