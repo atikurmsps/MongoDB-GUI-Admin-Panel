@@ -9,7 +9,6 @@ function processData(data: any): any {
         return data.map(item => processData(item));
     } else if (data !== null && typeof data === 'object') {
         const val = data as any;
-        // If it's already a specialized BSON type, don't recurse
         if (val._bsontype || val instanceof ObjectId || val instanceof Date) {
             return data;
         }
@@ -17,7 +16,6 @@ function processData(data: any): any {
         const processed: any = {};
         for (const key in data) {
             const value = data[key];
-            // Convert 24-char hex strings to ObjectIds
             if (typeof value === 'string' && value.length === 24 && ObjectId.isValid(value)) {
                 processed[key] = new ObjectId(value);
             } else {
@@ -31,67 +29,76 @@ function processData(data: any): any {
 
 // Helper to create a query that finds a document by ANY representation of its ID
 function resolveIdQuery(id: any): any {
-    let targetId = id;
+    const filters: any[] = [];
 
-    // If ID is a JSON string (often from frontend delete calls), parse it first
-    if (typeof id === 'string' && (id.startsWith('{') || id.startsWith('['))) {
+    // Add original as first candidate
+    filters.push({ _id: id });
+
+    let target = id;
+
+    // 1. Try EJSON/JSON parsing if input is a stringified object
+    if (typeof id === 'string' && (id.trim().startsWith('{') || id.trim().startsWith('['))) {
         try {
-            targetId = JSON.parse(id);
+            target = EJSON.parse(id);
+            filters.push({ _id: target });
         } catch (e) {
-            targetId = id;
+            try {
+                target = JSON.parse(id);
+                filters.push({ _id: target });
+            } catch (e2) { }
         }
     }
 
-    const filters: any[] = [{ _id: targetId }];
-
     try {
-        // 1. Handle standard string/ObjectId versions
-        if (typeof targetId === 'string' && ObjectId.isValid(targetId)) {
-            filters.push({ _id: new ObjectId(targetId) });
-        } else if (targetId && typeof targetId === 'object') {
+        // 2. String to ObjectId conversion
+        if (typeof target === 'string' && target.length === 24 && ObjectId.isValid(target)) {
+            filters.push({ _id: new ObjectId(target) });
+        }
+        // 3. Object-based ID variants
+        else if (target && typeof target === 'object') {
+            const t = target as any;
             // Handle EJSON {$oid: ...}
-            if (targetId.$oid) {
-                const oid = new ObjectId(targetId.$oid);
+            if (t.$oid && ObjectId.isValid(t.$oid)) {
+                const oid = new ObjectId(t.$oid);
                 filters.push({ _id: oid });
-                filters.push({ _id: oid.toString() });
+                filters.push({ _id: t.$oid }); // Ensure plain string is also checked
             }
-
-            // 2. Handle the corrupted "buffer object" pattern
-            if (targetId.buffer) {
-                try {
-                    const bytes = Object.values(targetId.buffer).filter(v => typeof v === 'number');
-                    if (bytes.length === 12) {
-                        const hex = Buffer.from(bytes as number[]).toString('hex');
-                        filters.push({ _id: hex });
-                        filters.push({ _id: new ObjectId(hex) });
-                    }
-                } catch (e) { }
+            // Handle corrupted "buffer" object
+            if (t.buffer) {
+                const bytes = Object.values(t.buffer).filter(v => typeof v === 'number');
+                if (bytes.length === 12) {
+                    const hex = Buffer.from(bytes as number[]).toString('hex');
+                    filters.push({ _id: new ObjectId(hex) });
+                    filters.push({ _id: hex });
+                }
             }
         }
     } catch (e) { }
 
-    // If the input was a string that didn't parse but is a valid ObjectId,
-    // ensure we check both the string and its ObjectId version
-    if (typeof id === 'string' && ObjectId.isValid(id)) {
+    // 4. Force check for 24-char hex strings if not already included
+    if (typeof id === 'string' && id.length === 24 && ObjectId.isValid(id)) {
         filters.push({ _id: new ObjectId(id) });
     }
 
-    // Return a query that matches any of these possibilities
-    return {
-        $or: filters.reduce((acc: any[], current) => {
-            const str = JSON.stringify(current);
-            if (!acc.find(f => JSON.stringify(f) === str)) {
-                acc.push(current);
-            }
-            return acc;
-        }, [])
-    };
+    // 5. IMPORTANT: De-duplicate using EJSON.stringify to distinguish types!
+    // JSON.stringify turns new ObjectId("hex") into just "hex", losing the type.
+    const uniqueFilters = filters.reduce((acc: any[], curr) => {
+        const str = EJSON.stringify(curr);
+        if (!acc.find(f => EJSON.stringify(f) === str)) {
+            acc.push(curr);
+        }
+        return acc;
+    }, []);
+
+    if (uniqueFilters.length === 0) return { _id: id };
+    if (uniqueFilters.length === 1) return uniqueFilters[0];
+    return { $or: uniqueFilters };
 }
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
-    const dbName = searchParams.get('db');
-    const colName = searchParams.get('col');
+    const dbName = (searchParams.get('db') || '').trim();
+    const colName = (searchParams.get('col') || '').trim();
     const page = parseInt(searchParams.get('page') || '1');
     const limit = 25;
 
@@ -109,7 +116,6 @@ export async function GET(req: NextRequest) {
             .limit(limit)
             .toArray();
 
-        // Use relaxed EJSON for standard JSON compatibility in frontend
         return new NextResponse(EJSON.stringify({
             data,
             total: count,
@@ -127,17 +133,16 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const { database, collection, data } = await req.json();
+        const dbName = (database || '').trim();
+        const colName = (collection || '').trim();
 
-        if (!database || !collection || !data) {
+        if (!dbName || !colName || !data) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const db = await getDb(database);
-
-        // Process data to ensure ObjectIds are preserved/converted
+        const db = await getDb(dbName);
         const processedData = processData(data);
-
-        const result = await db.collection(collection).insertOne(processedData);
+        const result = await db.collection(colName).insertOne(processedData);
 
         return NextResponse.json({
             message: 'Document inserted successfully',
@@ -152,26 +157,31 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
     try {
         const { database, collection, id, data } = await req.json();
+        const dbName = (database || '').trim();
+        const colName = (collection || '').trim();
 
-        if (!database || !collection || !id || !data) {
+        console.log(`[PATCH] Target: ${dbName}.${colName}, ID Raw:`, id);
+
+        if (!dbName || !colName || !id || !data) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const db = await getDb(database);
-
-        // Remove _id from data to avoid update error
+        const db = await getDb(dbName);
         const { _id, ...updateData } = data;
-        const processedUpdateData = processData(updateData);
+        const query = resolveIdQuery(id);
+        console.log(`[PATCH] Generated Query:`, JSON.stringify(query));
 
-        const result = await db.collection(collection).updateOne(
-            resolveIdQuery(id),
-            { $set: processedUpdateData }
+        const result = await db.collection(colName).updateOne(
+            query,
+            { $set: processData(updateData) }
         );
 
         if (result.matchedCount === 0) {
+            console.warn(`[PATCH] No document matched this query!`);
             return NextResponse.json({ error: 'Document not found' }, { status: 404 });
         }
 
+        console.log(`[PATCH] SUCCESS: Updated ${result.modifiedCount} document(s)`);
         return NextResponse.json({ message: 'Document updated successfully' });
     } catch (error) {
         console.error('Update data error:', error);
@@ -182,22 +192,28 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
-        const database = searchParams.get('db');
-        const collection = searchParams.get('col');
+        const dbName = (searchParams.get('db') || '').trim();
+        const colName = (searchParams.get('col') || '').trim();
         const idMatch = searchParams.get('id');
 
-        if (!database || !collection || !idMatch) {
+        console.log(`[DELETE] Target: ${dbName}.${colName}, ID Raw:`, idMatch);
+
+        if (!dbName || !colName || !idMatch) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const db = await getDb(database);
+        const db = await getDb(dbName);
+        const query = resolveIdQuery(idMatch);
+        console.log(`[DELETE] Generated Query:`, JSON.stringify(query));
 
-        const result = await db.collection(collection).deleteOne(resolveIdQuery(idMatch));
+        const result = await db.collection(colName).deleteOne(query);
 
         if (result.deletedCount === 0) {
+            console.warn(`[DELETE] No document matched this query!`);
             return NextResponse.json({ error: 'Document not found' }, { status: 404 });
         }
 
+        console.log(`[DELETE] SUCCESS: Deleted document`);
         return NextResponse.json({ message: 'Document deleted successfully' });
     } catch (error) {
         console.error('Delete data error:', error);

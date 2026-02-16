@@ -5,6 +5,7 @@ import { ObjectId } from 'mongodb';
 export async function POST(req: NextRequest) {
     try {
         const { database, collection } = await req.json();
+        console.log(`[REPAIR] Starting repair for ${database}.${collection}`);
 
         if (!database || !collection) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -13,65 +14,66 @@ export async function POST(req: NextRequest) {
         const db = await getDb(database);
         const col = db.collection(collection);
 
-        // 1. Find documents where _id is a string but is a valid ObjectId format
-        const stringDocs = await col.find({ _id: { $type: "string" } }).toArray();
+        // Fetch docs that are strings or objects (ObjectIds are excluded by type check)
+        // Note: Using a broad find and checking types manually for maximum safety
+        const allDocs = await col.find({}).toArray();
 
-        // 2. Find documents where _id is an object (could be the corrupted buffer or a nested object)
-        const objectDocs = await col.find({ _id: { $type: "object" } }).toArray();
+        console.log(`[REPAIR] Checking ${allDocs.length} total documents...`);
 
         let repairCount = 0;
-        let skipCount = 0;
-
-        const allDocs = [...stringDocs, ...objectDocs];
+        let failCount = 0;
 
         for (const doc of allDocs) {
-            let potentialId: string | null = null;
+            let targetId: any = null;
+            const docId = doc._id as any;
 
-            // Handle string ID
-            if (typeof doc._id === 'string' && ObjectId.isValid(doc._id)) {
-                potentialId = doc._id;
+            // 1. Skip if already an ObjectId
+            if (docId instanceof ObjectId) {
+                continue;
             }
-            // Handle the corrupted "buffer object" pattern
-            else if (doc._id && typeof doc._id === 'object' && (doc._id as any).buffer) {
+
+            // 2. Handle String ID
+            if (typeof docId === 'string' && ObjectId.isValid(docId) && docId.length === 24) {
+                targetId = new ObjectId(docId);
+            }
+            // 3. Handle corrupted buffer object
+            else if (docId && typeof docId === 'object' && docId.buffer) {
                 try {
-                    const bufObj = (doc._id as any).buffer;
-                    // It might be { "0": 105, ... } or a real array/buffer
-                    const bytes = Object.values(bufObj).filter(v => typeof v === 'number');
+                    const bytes = Object.values(docId.buffer).filter(v => typeof v === 'number');
                     if (bytes.length === 12) {
-                        const buf = Buffer.from(bytes as number[]);
-                        potentialId = buf.toString('hex');
+                        const hex = Buffer.from(bytes as number[]).toString('hex');
+                        targetId = new ObjectId(hex);
                     }
                 } catch (e) { }
             }
+            // 4. Handle EJSON format {$oid: ...}
+            else if (docId && typeof docId === 'object' && docId.$oid) {
+                targetId = new ObjectId(docId.$oid);
+            }
 
-            if (potentialId && ObjectId.isValid(potentialId)) {
+            if (targetId) {
                 try {
-                    const newId = new ObjectId(potentialId);
+                    console.log(`[REPAIR] Fixing ID: ${JSON.stringify(docId)} -> ${targetId}`);
                     const { _id, ...data } = doc;
-
-                    // Delete the old corrupted/string version
-                    await col.deleteOne({ _id: doc._id });
-
-                    // Re-insert with proper ObjectId
-                    await col.insertOne({ ...data, _id: newId });
-
-                    repairCount++;
+                    const delResult = await col.deleteOne({ _id: docId });
+                    if (delResult.deletedCount === 1) {
+                        await col.insertOne({ ...data, _id: targetId });
+                        repairCount++;
+                    } else {
+                        failCount++;
+                    }
                 } catch (e) {
-                    skipCount++;
-                }
-            } else {
-                // If it's already a proper ObjectId, it won't be in the find results anyway
-                // but we skip other weird object structures
-                if (!(doc._id instanceof ObjectId)) {
-                    skipCount++;
+                    console.error(`[REPAIR] Failed to repair doc:`, e);
+                    failCount++;
                 }
             }
         }
 
+        console.log(`[REPAIR] Completed. Repaired: ${repairCount}, Failed: ${failCount}`);
         return NextResponse.json({
             message: 'Repair completed',
             repaired: repairCount,
-            skipped: skipCount
+            failed: failCount
         });
     } catch (error) {
         console.error('Repair utility error:', error);
