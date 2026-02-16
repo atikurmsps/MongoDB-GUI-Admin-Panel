@@ -83,6 +83,9 @@ export default function EditDocumentModal({
                         <Dialog.Title className="text-sm font-bold text-gray-700 uppercase">
                             {document ? 'Edit Document' : 'Insert New Document'}
                         </Dialog.Title>
+                        <Dialog.Description className="sr-only">
+                            Edit or insert a MongoDB document using raw JSON format.
+                        </Dialog.Description>
                         <Dialog.Close asChild>
                             <button className="text-gray-400 hover:text-gray-900">
                                 <X className="h-4 w-4" />

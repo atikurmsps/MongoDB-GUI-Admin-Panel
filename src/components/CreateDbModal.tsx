@@ -50,6 +50,9 @@ export default function CreateDbModal({ onCreated }: { onCreated: () => void }) 
                 <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-sm bg-white p-6 shadow-xl border border-gray-400">
                     <div className="mb-6 flex items-center justify-between">
                         <Dialog.Title className="text-xl font-bold text-gray-900">New Database</Dialog.Title>
+                        <Dialog.Description className="sr-only">
+                            Provide a name for the new MongoDB database you wish to create.
+                        </Dialog.Description>
                         <Dialog.Close asChild>
                             <button className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900">
                                 <X className="h-5 w-5" />

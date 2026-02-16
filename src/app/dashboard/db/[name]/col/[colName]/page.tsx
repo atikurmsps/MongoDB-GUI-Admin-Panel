@@ -210,7 +210,7 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                                                     </button>
                                                 </td>
                                                 <td className="px-3 py-2 border-r border-gray-200 font-mono text-gray-500">
-                                                    {doc._id}
+                                                    {typeof doc._id === 'object' ? JSON.stringify(doc._id) : String(doc._id ?? '')}
                                                 </td>
                                                 {columns.map(col => (
                                                     <td key={col} className="px-3 py-2 border-r border-gray-200 font-mono text-xs">

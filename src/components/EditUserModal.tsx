@@ -149,6 +149,9 @@ export default function EditUserModal({ dbName, user, open, onOpenChange, onSave
                         <Dialog.Title className="text-sm font-bold text-gray-800 flex items-center gap-2">
                             Edit User Account: <span className="text-blue-700 font-mono">{user?.user}</span>
                         </Dialog.Title>
+                        <Dialog.Description className="sr-only">
+                            Modify permissions or change the password for the selected MongoDB user account.
+                        </Dialog.Description>
                         <Dialog.Close asChild>
                             <button className="h-[22px] w-[22px] flex items-center justify-center border border-gray-400 bg-white rounded-sm text-gray-600 hover:bg-gray-100 hover:text-red-500 transition-all shadow-sm" aria-label="Close">
                                 <X className="h-4 w-4 stroke-[2.5]" />

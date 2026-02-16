@@ -56,6 +56,9 @@ export default function ImportModal({ dbName, onImported }: { dbName: string, on
                 <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-sm bg-white p-6 shadow-xl border border-gray-400">
                     <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-2">
                         <Dialog.Title className="text-sm font-bold text-gray-700 uppercase">Import Database</Dialog.Title>
+                        <Dialog.Description className="sr-only">
+                            Choose a MongoDB dump file in JSON format to import data into the current database.
+                        </Dialog.Description>
                         <Dialog.Close asChild>
                             <button className="text-gray-400 hover:text-gray-900">
                                 <X className="h-4 w-4" />
