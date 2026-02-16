@@ -5,7 +5,6 @@ import { ObjectId } from 'mongodb';
 export async function POST(req: NextRequest) {
     try {
         const { database, collection } = await req.json();
-        console.log(`[REPAIR] Starting repair for ${database}.${collection}`);
 
         if (!database || !collection) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -17,8 +16,6 @@ export async function POST(req: NextRequest) {
         // Fetch docs that are strings or objects (ObjectIds are excluded by type check)
         // Note: Using a broad find and checking types manually for maximum safety
         const allDocs = await col.find({}).toArray();
-
-        console.log(`[REPAIR] Checking ${allDocs.length} total documents...`);
 
         let repairCount = 0;
         let failCount = 0;
@@ -53,7 +50,6 @@ export async function POST(req: NextRequest) {
 
             if (targetId) {
                 try {
-                    console.log(`[REPAIR] Fixing ID: ${JSON.stringify(docId)} -> ${targetId}`);
                     const { _id, ...data } = doc;
                     const delResult = await col.deleteOne({ _id: docId });
                     if (delResult.deletedCount === 1) {
@@ -69,7 +65,6 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        console.log(`[REPAIR] Completed. Repaired: ${repairCount}, Failed: ${failCount}`);
         return NextResponse.json({
             message: 'Repair completed',
             repaired: repairCount,

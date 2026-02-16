@@ -183,8 +183,6 @@ export async function PATCH(req: NextRequest) {
         const dbName = (database || '').trim();
         const colName = (collection || '').trim();
 
-        console.log(`[PATCH] Target: ${dbName}.${colName}, ID Raw:`, id);
-
         if (!dbName || !colName || !id || !data) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
@@ -194,20 +192,15 @@ export async function PATCH(req: NextRequest) {
         const query = resolveIdQuery(id);
         const processedUpdate = processData(updateData);
 
-        console.log(`[PATCH] Generated Query:`, JSON.stringify(query));
-        console.log(`[PATCH] Update Data Keys:`, Object.keys(processedUpdate));
-
         const result = await db.collection(colName).updateOne(
             query,
             { $set: processedUpdate }
         );
 
         if (result.matchedCount === 0) {
-            console.warn(`[PATCH] No document matched this query!`);
             return NextResponse.json({ error: 'Document not found' }, { status: 404 });
         }
 
-        console.log(`[PATCH] SUCCESS: Updated ${result.modifiedCount} document(s)`);
         return NextResponse.json({ message: 'Document updated successfully' });
     } catch (error) {
         console.error('Update data error:', error);
@@ -222,24 +215,18 @@ export async function DELETE(req: NextRequest) {
         const colName = (searchParams.get('col') || '').trim();
         const idMatch = searchParams.get('id');
 
-        console.log(`[DELETE] Target: ${dbName}.${colName}, ID Raw:`, idMatch);
-
         if (!dbName || !colName || !idMatch) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         const db = await getDb(dbName);
         const query = resolveIdQuery(idMatch);
-        console.log(`[DELETE] Generated Query:`, JSON.stringify(query));
-
         const result = await db.collection(colName).deleteOne(query);
 
         if (result.deletedCount === 0) {
-            console.warn(`[DELETE] No document matched this query!`);
             return NextResponse.json({ error: 'Document not found' }, { status: 404 });
         }
 
-        console.log(`[DELETE] SUCCESS: Deleted document`);
         return NextResponse.json({ message: 'Document deleted successfully' });
     } catch (error) {
         console.error('Delete data error:', error);
