@@ -44,7 +44,8 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
         if (!confirm('Are you sure you want to delete this document?')) return;
 
         try {
-            const res = await fetch(`/api/mongodb/collections/data?db=${dbName}&col=${colName}&id=${id}`, {
+            const idParam = typeof id === 'object' ? JSON.stringify(id) : id;
+            const res = await fetch(`/api/mongodb/collections/data?db=${dbName}&col=${colName}&id=${encodeURIComponent(idParam)}`, {
                 method: 'DELETE',
             });
 
@@ -193,7 +194,7 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {docs.map((doc, i) => (
-                                            <tr key={doc._id || i} className="hover:bg-[#f9f9f9]">
+                                            <tr key={typeof doc._id === 'object' ? JSON.stringify(doc._id) : (doc._id || i)} className="hover:bg-[#f9f9f9]">
                                                 <td className="px-3 py-2 text-center border-r border-gray-200">
                                                     <button onClick={() => handleEdit(doc)} className="text-blue-600 hover:underline flex items-center justify-center mx-auto">
                                                         <Edit className="h-3 w-3" />
