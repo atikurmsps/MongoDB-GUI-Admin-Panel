@@ -7,7 +7,7 @@ const menuItems = [
     { name: 'Databases', icon: Database, href: '/dashboard' },
     { name: 'SQL', icon: Terminal, href: '#' },
     { name: 'Status', icon: BarChart2, href: '#' },
-    { name: 'User accounts', icon: Users, href: '#' },
+    { name: 'User accounts', icon: Users, href: '/dashboard/users' },
     { name: 'Export', icon: Download, href: '#' },
     { name: 'Import', icon: Upload, href: '#' },
     { name: 'Settings', icon: Settings, href: '#' },

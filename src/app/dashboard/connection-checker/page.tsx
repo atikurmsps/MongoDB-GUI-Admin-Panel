@@ -69,7 +69,7 @@ export default function ConnectionChecker() {
                                         <textarea
                                             value={uri}
                                             onChange={(e) => setUri(e.target.value)}
-                                            placeholder="mongodb://username:password@host:port/database"
+                                            placeholder="Your MongoDB URI"
                                             className="w-full h-24 p-2 border border-gray-300 rounded-sm text-xs font-mono outline-none focus:border-blue-400 bg-gray-50/50"
                                         />
                                         {uri && (
@@ -82,7 +82,6 @@ export default function ConnectionChecker() {
                                             </button>
                                         )}
                                     </div>
-                                    <p className="text-[10px] text-gray-500 italic">Example: mongodb+srv://user:pass@cluster.mongodb.net/dbname</p>
                                 </div>
 
                                 <button
