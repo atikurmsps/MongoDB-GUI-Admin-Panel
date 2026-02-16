@@ -39,69 +39,77 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-            <div className="w-full max-w-md animate-in glass rounded-2xl p-8">
-                <div className="mb-8 text-center">
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                        <Lock className="h-6 w-6 text-primary" />
+        <div className="flex min-h-screen items-center justify-center bg-[#f3f3f3] px-4 font-sans">
+            <div className="w-full max-w-md bg-white border border-gray-300 rounded-sm shadow-xl overflow-hidden">
+                <div className="bg-[#f8f8f8] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Database className="h-5 w-5 text-blue-600" />
+                        <h1 className="text-[15px] font-bold text-gray-800 uppercase tracking-tight">MongoAdmin Login</h1>
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900">Admin Login</h1>
-                    <p className="mt-2 text-sm text-gray-600">Enter your credentials to manage MongoDB</p>
+                    <Lock className="h-4 w-4 text-gray-400" />
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                        <Label.Root htmlFor="username" className="text-sm font-medium text-gray-700">
-                            Username
-                        </Label.Root>
-                        <input
-                            id="username"
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            required
-                            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-gray-900 outline-none ring-primary/20 transition-all focus:border-primary focus:ring-4"
-                            placeholder="admin"
-                        />
-                    </div>
+                <div className="p-8">
+                    
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-1.5">
+                            <Label.Root htmlFor="username" className="text-[11px] font-bold text-gray-600 uppercase">
+                                Username
+                            </Label.Root>
+                            <input
+                                id="username"
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                required
+                                className="w-full border border-gray-300 rounded-sm bg-[#fcfcfc] px-3 py-2 text-[13px] text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/5 placeholder:text-gray-300"
+                                placeholder="Enter username"
+                            />
+                        </div>
 
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <Label.Root htmlFor="password" title="password" className="text-sm font-medium text-gray-700">
+                        <div className="space-y-1.5">
+                            <Label.Root htmlFor="password" title="password" className="text-[11px] font-bold text-gray-600 uppercase">
                                 Password
                             </Label.Root>
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="w-full border border-gray-300 rounded-sm bg-[#fcfcfc] px-3 py-2 text-[13px] text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/5 placeholder:text-gray-300"
+                                placeholder="••••••••"
+                            />
                         </div>
-                        <input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-gray-900 outline-none ring-primary/20 transition-all focus:border-primary focus:ring-4"
-                            placeholder="••••••••"
-                        />
+
+                        {error && (
+                            <div className="p-3 border border-red-200 bg-red-50 rounded-sm text-red-700 text-[11px] italic animate-in fade-in slide-in-from-top-1">
+                                * {error}
+                            </div>
+                        )}
+
+                        <div className="pt-2">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="flex w-full items-center justify-center rounded-sm bg-blue-600 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg border border-blue-700 hover:bg-blue-700 transition-all active:scale-[0.98] disabled:opacity-50"
+                            >
+                                {loading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    'Establish Connection'
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div className="bg-[#f8f8f8] border-t border-gray-200 px-6 py-4">
+                    <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-tight">
+                        <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                        System Ready
                     </div>
-
-                    {error && <p className="text-sm text-red-600">{error}</p>}
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="flex w-full items-center justify-center rounded-lg bg-primary py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                    >
-                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Log In'}
-                    </button>
-                </form>
-
-                <p className="mt-8 text-center text-sm text-gray-500">
-                    Don&apos;t have an account?{' '}
-                    <button
-                        onClick={() => router.push('/register')}
-                        className="font-semibold text-primary hover:underline"
-                    >
-                        Register
-                    </button>
-                </p>
+                </div>
             </div>
         </div>
     );
