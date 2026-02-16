@@ -23,12 +23,10 @@ export default function ImportModal({ dbName, onImported }: { dbName: string, on
 
         try {
             const text = await file.text();
-            const dump = JSON.parse(text);
 
             const res = await fetch(`/api/mongodb/import?db=${dbName}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dump),
+                body: text,
             });
 
             if (res.ok) {

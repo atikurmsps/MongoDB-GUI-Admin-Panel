@@ -1,5 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { EJSON } from 'bson';
+import { ObjectId } from 'mongodb';
+
+// Recursive helper to convert string _ids to ObjectIds
+function processData(data: any): any {
+    if (Array.isArray(data)) {
+        return data.map(item => processData(item));
+    } else if (data !== null && typeof data === 'object') {
+        const processed: any = {};
+        for (const key in data) {
+            if (key === '_id' && typeof data[key] === 'string' && ObjectId.isValid(data[key])) {
+                processed[key] = new ObjectId(data[key]);
+            } else {
+                processed[key] = processData(data[key]);
+            }
+        }
+        return processed;
+    }
+    return data;
+}
 
 export async function POST(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -11,15 +31,13 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const dump = await req.json();
+        const text = await req.text();
+        const dump = EJSON.parse(text);
         const db = await getDb(dbName);
 
         if (colName) {
-            // Import into specific collection
-            // Expected dump format for single col: either array of docs OR { colName: [docs] }
             let data = Array.isArray(dump) ? dump : dump[colName];
             if (!Array.isArray(data)) {
-                // Try to get first key if it's an object with one key
                 const keys = Object.keys(dump);
                 if (keys.length === 1 && Array.isArray(dump[keys[0]])) {
                     data = dump[keys[0]];
@@ -27,13 +45,14 @@ export async function POST(req: NextRequest) {
             }
 
             if (Array.isArray(data) && data.length > 0) {
-                await db.collection(colName).insertMany(data);
+                const processed = processData(data);
+                await db.collection(colName).insertMany(processed);
             }
         } else {
-            // Bulk import
             for (const collectionName in dump) {
                 if (Array.isArray(dump[collectionName]) && dump[collectionName].length > 0) {
-                    await db.collection(collectionName).insertMany(dump[collectionName]);
+                    const processed = processData(dump[collectionName]);
+                    await db.collection(collectionName).insertMany(processed);
                 }
             }
         }

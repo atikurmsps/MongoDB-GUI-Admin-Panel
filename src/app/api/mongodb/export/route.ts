@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { EJSON } from 'bson';
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
 
         const filename = colName ? `${dbName}_${colName}_dump.json` : `${dbName}_dump.json`;
 
-        return new NextResponse(JSON.stringify(dump, null, 2), {
+        return new NextResponse(EJSON.stringify(dump, { relaxed: false }), {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
