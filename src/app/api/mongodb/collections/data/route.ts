@@ -31,32 +31,61 @@ function processData(data: any): any {
 
 // Helper to create a query that finds a document by ANY representation of its ID
 function resolveIdQuery(id: any): any {
-    const filters: any[] = [{ _id: id }];
+    let targetId = id;
 
-    // 1. Try to add direct string/ObjectId versions
+    // If ID is a JSON string (often from frontend delete calls), parse it first
+    if (typeof id === 'string' && (id.startsWith('{') || id.startsWith('['))) {
+        try {
+            targetId = JSON.parse(id);
+        } catch (e) {
+            targetId = id;
+        }
+    }
+
+    const filters: any[] = [{ _id: targetId }];
+
     try {
-        if (typeof id === 'string' && ObjectId.isValid(id)) {
-            filters.push({ _id: new ObjectId(id) });
-        } else if (id && id.$oid) {
-            const oid = new ObjectId(id.$oid);
-            filters.push({ _id: oid });
-            filters.push({ _id: oid.toString() });
+        // 1. Handle standard string/ObjectId versions
+        if (typeof targetId === 'string' && ObjectId.isValid(targetId)) {
+            filters.push({ _id: new ObjectId(targetId) });
+        } else if (targetId && typeof targetId === 'object') {
+            // Handle EJSON {$oid: ...}
+            if (targetId.$oid) {
+                const oid = new ObjectId(targetId.$oid);
+                filters.push({ _id: oid });
+                filters.push({ _id: oid.toString() });
+            }
+
+            // 2. Handle the corrupted "buffer object" pattern
+            if (targetId.buffer) {
+                try {
+                    const bytes = Object.values(targetId.buffer).filter(v => typeof v === 'number');
+                    if (bytes.length === 12) {
+                        const hex = Buffer.from(bytes as number[]).toString('hex');
+                        filters.push({ _id: hex });
+                        filters.push({ _id: new ObjectId(hex) });
+                    }
+                } catch (e) { }
+            }
         }
     } catch (e) { }
 
-    // 2. If it's the corrupted buffer object, try to extract hex and add variants
-    if (id && typeof id === 'object' && (id as any).buffer) {
-        try {
-            const bytes = Object.values((id as any).buffer).filter(v => typeof v === 'number');
-            if (bytes.length === 12) {
-                const hex = Buffer.from(bytes as number[]).toString('hex');
-                filters.push({ _id: hex });
-                filters.push({ _id: new ObjectId(hex) });
-            }
-        } catch (e) { }
+    // If the input was a string that didn't parse but is a valid ObjectId,
+    // ensure we check both the string and its ObjectId version
+    if (typeof id === 'string' && ObjectId.isValid(id)) {
+        filters.push({ _id: new ObjectId(id) });
     }
 
-    return filters.length > 1 ? { $or: filters } : { _id: id };
+    // Return a query that matches any of these possibilities
+    return {
+        $or: filters.reduce((acc: any[], current) => {
+            const str = JSON.stringify(current);
+            if (!acc.find(f => JSON.stringify(f) === str)) {
+                acc.push(current);
+            }
+            return acc;
+        }, [])
+    };
 }
 
 export async function GET(req: NextRequest) {
