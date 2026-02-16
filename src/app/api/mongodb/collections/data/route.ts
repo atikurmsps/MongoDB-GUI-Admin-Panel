@@ -3,19 +3,40 @@ import { getDb } from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import { EJSON } from 'bson';
 
-// Recursive helper to ensure data types are correct (ObjectId strings -> ObjectIds)
+// Recursive helper to ensure data types are correct (ObjectId strings/EJSON -> BSON types)
 function processData(data: any): any {
+    if (data === null || data === undefined) return data;
+
+    // Handle Arrays
     if (Array.isArray(data)) {
         return data.map(item => processData(item));
-    } else if (data !== null && typeof data === 'object') {
-        const val = data as any;
-        if (val._bsontype || val instanceof ObjectId || val instanceof Date) {
+    }
+
+    // Handle Objects
+    if (typeof data === 'object') {
+        // 1. Check if it's already a BSON type (ObjectId, Date, etc)
+        if (data._bsontype || data instanceof ObjectId || data instanceof Date) {
             return data;
         }
 
+        // 2. Handle EJSON $oid: "..."
+        if (data.$oid && typeof data.$oid === 'string' && ObjectId.isValid(data.$oid)) {
+            return new ObjectId(data.$oid);
+        }
+
+        // 3. Handle EJSON $date: "..." or $date: { $numberLong: "..." }
+        if (data.$date) {
+            const dateVal = typeof data.$date === 'object' ? data.$date.$numberLong : data.$date;
+            const d = new Date(dateVal);
+            if (!isNaN(d.getTime())) return d;
+        }
+
+        // 4. Recurse into plain objects
         const processed: any = {};
         for (const key in data) {
             const value = data[key];
+
+            // Auto-convert 24-char hex strings that look like ObjectIds
             if (typeof value === 'string' && value.length === 24 && ObjectId.isValid(value)) {
                 processed[key] = new ObjectId(value);
             } else {
@@ -24,6 +45,7 @@ function processData(data: any): any {
         }
         return processed;
     }
+
     return data;
 }
 
@@ -150,7 +172,7 @@ export async function POST(req: NextRequest) {
         });
     } catch (error) {
         console.error('Insert data error:', error);
-        return NextResponse.json({ error: 'Failed to insert document' }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message || 'Failed to insert document' }, { status: 500 });
     }
 }
 
@@ -169,11 +191,14 @@ export async function PATCH(req: NextRequest) {
         const db = await getDb(dbName);
         const { _id, ...updateData } = data;
         const query = resolveIdQuery(id);
+        const processedUpdate = processData(updateData);
+
         console.log(`[PATCH] Generated Query:`, JSON.stringify(query));
+        console.log(`[PATCH] Update Data Keys:`, Object.keys(processedUpdate));
 
         const result = await db.collection(colName).updateOne(
             query,
-            { $set: processData(updateData) }
+            { $set: processedUpdate }
         );
 
         if (result.matchedCount === 0) {
@@ -185,7 +210,7 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ message: 'Document updated successfully' });
     } catch (error) {
         console.error('Update data error:', error);
-        return NextResponse.json({ error: 'Failed to update document' }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message || 'Failed to update document' }, { status: 500 });
     }
 }
 
