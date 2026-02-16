@@ -56,7 +56,7 @@ export async function PATCH(req: NextRequest) {
         } catch (e) { }
 
         const result = await db.collection(collection).updateOne(
-            { _id: queryId },
+            { $or: [{ _id: queryId }, { _id: id }] },
             { $set: updateData }
         );
 
@@ -91,7 +91,9 @@ export async function DELETE(req: NextRequest) {
             }
         } catch (e) { }
 
-        const result = await db.collection(collection).deleteOne({ _id: queryId });
+        const result = await db.collection(collection).deleteOne({
+            $or: [{ _id: queryId }, { _id: id }]
+        });
 
         if (result.deletedCount === 0) {
             return NextResponse.json({ error: 'Document not found' }, { status: 404 });
