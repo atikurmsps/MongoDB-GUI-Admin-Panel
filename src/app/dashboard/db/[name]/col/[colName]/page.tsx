@@ -5,7 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import ImportModal from '@/components/ImportModal';
 import EditDocumentModal from '@/components/EditDocumentModal';
-import { Table, Search, ChevronLeft, ChevronRight, Loader2, Download, Upload, ArrowLeft, Trash2, Edit, Plus } from 'lucide-react';
+import { Table, Search, ChevronLeft, ChevronRight, Loader2, Download, Upload, ArrowLeft, Trash2, Edit, Plus, Copy } from 'lucide-react';
 import Link from 'next/link';
 
 export default function BrowseCollectionPage({ params }: { params: Promise<{ name: string, colName: string }> }) {
@@ -69,6 +69,12 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
         setEditModalOpen(true);
     };
 
+    const handleCopy = (doc: any) => {
+        const { _id, ...rest } = doc;
+        setEditingDoc(rest);
+        setEditModalOpen(true);
+    };
+
     // Dynamic columns based on documents
     const allKeys = Array.from(new Set(docs.flatMap(doc => Object.keys(doc))));
     const columns = allKeys.filter(key => key !== '_id');
@@ -79,6 +85,7 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
             <div className="flex flex-1 flex-col ml-60 min-w-0 max-w-full">
                 <Topbar />
                 <main className="p-4 flex-1 overflow-y-auto overflow-x-hidden">
+                    {/* ... header logic ... */}
                     <header className="mb-4">
                         <div className="flex items-center gap-2 mb-2 text-[10px]">
                             <Link href={`/dashboard/db/${dbName}`} className="text-blue-600 hover:underline flex items-center gap-1">
@@ -115,6 +122,7 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                                 <span>Showing {docs.length === 0 ? 0 : (page - 1) * 25 + 1} - {(page - 1) * 25 + docs.length} rows. Total: {total}</span>
                                 <button onClick={fetchData} className="text-blue-600 hover:underline font-normal text-[10px]">Refresh</button>
                             </div>
+                            {/* ... pagination logic ... */}
                             <div className="flex items-center gap-2">
                                 <button
                                     disabled={page === 1}
@@ -143,38 +151,43 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                                 <table className="w-full text-[11px] text-left border-collapse whitespace-nowrap">
                                     <thead className="bg-[#fcfcfc] border-b border-gray-200">
                                         <tr>
+                                            <th className="px-3 py-2 w-16 text-center uppercase text-[10px] font-bold border-r border-gray-200">Edit</th>
+                                            <th className="px-3 py-2 w-16 text-center uppercase text-[10px] font-bold border-r border-gray-200">Copy</th>
+                                            <th className="px-3 py-2 w-16 text-center uppercase text-[10px] font-bold border-r border-gray-200">Delete</th>
                                             <th className="px-3 py-2 border-r border-gray-200 font-bold text-blue-800">_id</th>
                                             {columns.map(col => (
                                                 <th key={col} className="px-3 py-2 border-r border-gray-200 font-bold text-blue-800">{col}</th>
                                             ))}
-                                            <th className="px-3 py-2 w-24 text-center uppercase text-[10px] italic font-normal text-gray-500">Options</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {docs.map((doc, i) => (
                                             <tr key={doc._id || i} className="hover:bg-[#f9f9f9]">
+                                                <td className="px-3 py-2 text-center border-r border-gray-200">
+                                                    <button onClick={() => handleEdit(doc)} className="text-blue-600 hover:underline flex items-center justify-center mx-auto">
+                                                        <Edit className="h-3 w-3" />
+                                                    </button>
+                                                </td>
+                                                <td className="px-3 py-2 text-center border-r border-gray-200">
+                                                    <button onClick={() => handleCopy(doc)} className="text-blue-600 hover:underline flex items-center justify-center mx-auto">
+                                                        <Copy className="h-3 w-3" />
+                                                    </button>
+                                                </td>
+                                                <td className="px-3 py-2 text-center border-r border-gray-200">
+                                                    <button onClick={() => handleDelete(doc._id)} className="text-red-600 hover:underline flex items-center justify-center mx-auto">
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </button>
+                                                </td>
                                                 <td className="px-3 py-2 border-r border-gray-200 font-mono text-gray-500">
                                                     {doc._id}
                                                 </td>
                                                 {columns.map(col => (
-                                                    <td key={col} className="px-3 py-2 border-r border-gray-200 font-mono">
-                                                        {typeof doc[col] === 'object' ? JSON.stringify(doc[col]) : String(doc[col] ?? '')}
+                                                    <td key={col} className="px-3 py-2 border-r border-gray-200 font-mono text-xs">
+                                                        <span className="truncate max-w-[200px] block">
+                                                            {typeof doc[col] === 'object' ? JSON.stringify(doc[col]) : String(doc[col] ?? '')}
+                                                        </span>
                                                     </td>
                                                 ))}
-                                                <td className="px-3 py-2 text-center space-x-2">
-                                                    <button
-                                                        onClick={() => handleEdit(doc)}
-                                                        className="text-blue-600 hover:underline inline-flex items-center gap-0.5"
-                                                    >
-                                                        <Edit className="h-3 w-3" /> Edit
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(doc._id)}
-                                                        className="text-red-600 hover:underline inline-flex items-center gap-0.5"
-                                                    >
-                                                        <Trash2 className="h-3 w-3" /> Delete
-                                                    </button>
-                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>

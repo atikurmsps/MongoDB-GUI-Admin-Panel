@@ -90,7 +90,9 @@ export default function DbPage({ params }: { params: Promise<{ name: string }> }
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold">Table/Collection</th>
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold text-center">Rows</th>
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold text-center">Size</th>
-                                    <th className="px-3 py-2 font-bold">Action</th>
+                                    <th className="px-3 py-2 border-r border-gray-200 font-bold text-center w-16">Browse</th>
+                                    <th className="px-3 py-2 border-r border-gray-200 font-bold text-center w-16">Empty</th>
+                                    <th className="px-3 py-2 font-bold text-center w-16">Drop</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 italic">
@@ -104,17 +106,23 @@ export default function DbPage({ params }: { params: Promise<{ name: string }> }
                                         </td>
                                         <td className="px-3 py-2 border-r border-gray-200 text-center font-normal">{col.count}</td>
                                         <td className="px-3 py-2 border-r border-gray-200 text-center font-normal">{(col.size / 1024).toFixed(1)} KB</td>
-                                        <td className="px-3 py-2 space-x-3 not-italic uppercase text-[10px]">
-                                            <Link href={`/dashboard/db/${dbName}/col/${col.name}`} className="text-blue-600 hover:underline">Browse</Link>
+                                        <td className="px-3 py-2 border-r border-gray-200 text-center uppercase text-[10px] not-italic">
+                                            <Link href={`/dashboard/db/${dbName}/col/${col.name}`} className="text-blue-600 hover:underline flex items-center justify-center gap-1">
+                                                Browse
+                                            </Link>
+                                        </td>
+                                        <td className="px-3 py-2 border-r border-gray-200 text-center uppercase text-[10px] not-italic">
                                             <button
                                                 onClick={() => handleAction(col.name, 'empty')}
-                                                className="text-red-600 hover:underline"
+                                                className="text-red-600 hover:underline flex items-center justify-center gap-1 mx-auto"
                                             >
                                                 Empty
                                             </button>
+                                        </td>
+                                        <td className="px-3 py-2 text-center uppercase text-[10px] not-italic">
                                             <button
                                                 onClick={() => handleAction(col.name, 'drop')}
-                                                className="text-red-600 hover:underline font-bold"
+                                                className="text-red-600 hover:underline font-bold flex items-center justify-center gap-1 mx-auto"
                                             >
                                                 Drop
                                             </button>

@@ -91,8 +91,8 @@ export default function UsersPage() {
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold">Database</th>
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold">Privileges</th>
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold">Connection URI</th>
-                                    <th className="px-3 py-2 border-r border-gray-200 font-bold text-center">Edit</th>
-                                    <th className="px-3 py-2 font-bold text-center">Delete</th>
+                                    <th className="px-3 py-2 border-r border-gray-200 font-bold text-center w-20">Edit</th>
+                                    <th className="px-3 py-2 font-bold text-center w-20">Delete</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">

@@ -138,8 +138,9 @@ export default function Dashboard() {
                                         <th className="px-3 py-2 border-r border-gray-300 font-bold">Database</th>
                                         <th className="px-3 py-2 border-r border-gray-300 font-bold">Collation</th>
                                         <th className="px-3 py-2 border-r border-gray-300 font-bold">Size</th>
-                                        <th className="px-3 py-2 border-r border-gray-300 font-bold">User accounts</th>
-                                        <th className="px-3 py-2 font-bold">Action</th>
+                                        <th className="px-3 py-2 border-r border-gray-300 font-bold text-center w-24">Structure</th>
+                                        <th className="px-3 py-2 border-r border-gray-300 font-bold text-center w-24">Privileges</th>
+                                        <th className="px-3 py-2 font-bold text-center w-24">Drop</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
@@ -155,15 +156,20 @@ export default function Dashboard() {
                                             </td>
                                             <td className="px-3 py-2 border-r border-gray-300 text-gray-500 italic">utf8mb4_general_ci</td>
                                             <td className="px-3 py-2 border-r border-gray-300">{(db.sizeOnDisk / (1024 * 1024)).toFixed(2)} MB</td>
-                                            <td className="px-3 py-2 border-r border-gray-300">
-                                                <Link href={`/dashboard/db/${db.name}/users`} className="text-[#235a81] hover:underline flex items-center gap-1">
-                                                    User accounts
+                                            <td className="px-3 py-2 border-r border-gray-300 text-center uppercase text-[10px]">
+                                                <Link href={`/dashboard/db/${db.name}`} className="text-blue-700 hover:underline flex items-center justify-center gap-1">
+                                                    Structure
                                                 </Link>
                                             </td>
-                                            <td className="px-3 py-2">
+                                            <td className="px-3 py-2 border-r border-gray-300 text-center uppercase text-[10px]">
+                                                <Link href={`/dashboard/db/${db.name}/users`} className="text-[#235a81] hover:underline flex items-center justify-center gap-1">
+                                                    Privileges
+                                                </Link>
+                                            </td>
+                                            <td className="px-3 py-2 text-center uppercase text-[10px]">
                                                 <button
                                                     onClick={() => setDeleteDbName(db.name)}
-                                                    className="text-red-700 hover:underline flex items-center gap-1"
+                                                    className="text-red-700 hover:underline flex items-center justify-center gap-1 mx-auto"
                                                 >
                                                     <Trash2 className="h-3 w-3" /> Drop
                                                 </button>
