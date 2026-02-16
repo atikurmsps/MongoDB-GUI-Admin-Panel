@@ -109,8 +109,8 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                         </div>
                     </header>
 
-                    <div className="pma-panel rounded-sm bg-white overflow-x-auto w-full min-h-[400px]">
-                        <div className="bg-[#f2f2f2] px-3 py-2 border-b border-gray-300 text-xs font-bold flex justify-between items-center whitespace-nowrap">
+                    <div className="pma-panel rounded-sm bg-white w-full min-h-[400px] flex flex-col">
+                        <div className="bg-[#f2f2f2] px-3 py-2 border-b border-gray-300 text-xs font-bold flex justify-between items-center whitespace-nowrap shrink-0">
                             <div className="flex items-center gap-4">
                                 <span>Showing {docs.length === 0 ? 0 : (page - 1) * 25 + 1} - {(page - 1) * 25 + docs.length} rows. Total: {total}</span>
                                 <button onClick={fetchData} className="text-blue-600 hover:underline font-normal text-[10px]">Refresh</button>
@@ -134,53 +134,55 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                             </div>
                         </div>
 
-                        {loading ? (
-                            <div className="flex items-center justify-center p-20">
-                                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                            </div>
-                        ) : docs.length > 0 ? (
-                            <table className="w-full text-[11px] text-left border-collapse whitespace-nowrap">
-                                <thead className="bg-[#fcfcfc] border-b border-gray-200">
-                                    <tr>
-                                        <th className="px-3 py-2 border-r border-gray-200 font-bold text-blue-800">_id</th>
-                                        {columns.map(col => (
-                                            <th key={col} className="px-3 py-2 border-r border-gray-200 font-bold text-blue-800">{col}</th>
-                                        ))}
-                                        <th className="px-3 py-2 w-24 text-center uppercase text-[10px] italic font-normal text-gray-500">Options</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {docs.map((doc, i) => (
-                                        <tr key={doc._id || i} className="hover:bg-[#f9f9f9]">
-                                            <td className="px-3 py-2 border-r border-gray-200 font-mono text-gray-500">
-                                                {doc._id}
-                                            </td>
+                        <div className="flex-1 overflow-x-auto">
+                            {loading ? (
+                                <div className="flex items-center justify-center p-20">
+                                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                                </div>
+                            ) : docs.length > 0 ? (
+                                <table className="w-full text-[11px] text-left border-collapse whitespace-nowrap">
+                                    <thead className="bg-[#fcfcfc] border-b border-gray-200">
+                                        <tr>
+                                            <th className="px-3 py-2 border-r border-gray-200 font-bold text-blue-800">_id</th>
                                             {columns.map(col => (
-                                                <td key={col} className="px-3 py-2 border-r border-gray-200 font-mono">
-                                                    {typeof doc[col] === 'object' ? JSON.stringify(doc[col]) : String(doc[col] ?? '')}
-                                                </td>
+                                                <th key={col} className="px-3 py-2 border-r border-gray-200 font-bold text-blue-800">{col}</th>
                                             ))}
-                                            <td className="px-3 py-2 text-center space-x-2">
-                                                <button
-                                                    onClick={() => handleEdit(doc)}
-                                                    className="text-blue-600 hover:underline inline-flex items-center gap-0.5"
-                                                >
-                                                    <Edit className="h-3 w-3" /> Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(doc._id)}
-                                                    className="text-red-600 hover:underline inline-flex items-center gap-0.5"
-                                                >
-                                                    <Trash2 className="h-3 w-3" /> Delete
-                                                </button>
-                                            </td>
+                                            <th className="px-3 py-2 w-24 text-center uppercase text-[10px] italic font-normal text-gray-500">Options</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <div className="p-20 text-center text-gray-400 italic">No documents found in this collection.</div>
-                        )}
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {docs.map((doc, i) => (
+                                            <tr key={doc._id || i} className="hover:bg-[#f9f9f9]">
+                                                <td className="px-3 py-2 border-r border-gray-200 font-mono text-gray-500">
+                                                    {doc._id}
+                                                </td>
+                                                {columns.map(col => (
+                                                    <td key={col} className="px-3 py-2 border-r border-gray-200 font-mono">
+                                                        {typeof doc[col] === 'object' ? JSON.stringify(doc[col]) : String(doc[col] ?? '')}
+                                                    </td>
+                                                ))}
+                                                <td className="px-3 py-2 text-center space-x-2">
+                                                    <button
+                                                        onClick={() => handleEdit(doc)}
+                                                        className="text-blue-600 hover:underline inline-flex items-center gap-0.5"
+                                                    >
+                                                        <Edit className="h-3 w-3" /> Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(doc._id)}
+                                                        className="text-red-600 hover:underline inline-flex items-center gap-0.5"
+                                                    >
+                                                        <Trash2 className="h-3 w-3" /> Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="p-20 text-center text-gray-400 italic">No documents found in this collection.</div>
+                            )}
+                        </div>
                     </div>
 
                     <EditDocumentModal
