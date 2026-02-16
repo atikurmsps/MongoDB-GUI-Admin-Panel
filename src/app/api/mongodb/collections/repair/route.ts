@@ -13,22 +13,44 @@ export async function POST(req: NextRequest) {
         const db = await getDb(database);
         const col = db.collection(collection);
 
-        // Find documents where _id is a string but is a valid ObjectId format
-        const docs = await col.find({ _id: { $type: "string" } }).toArray();
+        // 1. Find documents where _id is a string but is a valid ObjectId format
+        const stringDocs = await col.find({ _id: { $type: "string" } }).toArray();
+
+        // 2. Find documents where _id is an object (could be the corrupted buffer or a nested object)
+        const objectDocs = await col.find({ _id: { $type: "object" } }).toArray();
+
         let repairCount = 0;
         let skipCount = 0;
 
-        for (const doc of docs) {
-            if (ObjectId.isValid(doc._id)) {
+        const allDocs = [...stringDocs, ...objectDocs];
+
+        for (const doc of allDocs) {
+            let potentialId: string | null = null;
+
+            // Handle string ID
+            if (typeof doc._id === 'string' && ObjectId.isValid(doc._id)) {
+                potentialId = doc._id;
+            }
+            // Handle the corrupted "buffer object" pattern
+            else if (doc._id && typeof doc._id === 'object' && (doc._id as any).buffer) {
                 try {
-                    const newId = new ObjectId(doc._id);
+                    // Try to extract the hex string if possible, or convert the buffer
+                    const buf = Buffer.from(Object.values((doc._id as any).buffer) as number[]);
+                    if (buf.length === 12) {
+                        potentialId = buf.toString('hex');
+                    }
+                } catch (e) { }
+            }
+
+            if (potentialId && ObjectId.isValid(potentialId)) {
+                try {
+                    const newId = new ObjectId(potentialId);
                     const { _id, ...data } = doc;
 
-                    // Delete old doc with string _id
+                    // Delete the old corrupted/string version
                     await col.deleteOne({ _id: doc._id });
 
-                    // Insert new doc with ObjectId _id
-                    // We use insertOne to ensure we don't accidentally update if something else changed
+                    // Re-insert with proper ObjectId
                     await col.insertOne({ ...data, _id: newId });
 
                     repairCount++;
@@ -36,7 +58,11 @@ export async function POST(req: NextRequest) {
                     skipCount++;
                 }
             } else {
-                skipCount++;
+                // If it's already a proper ObjectId, it won't be in the find results anyway
+                // but we skip other weird object structures
+                if (!(doc._id instanceof ObjectId)) {
+                    skipCount++;
+                }
             }
         }
 

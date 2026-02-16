@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
 
         const filename = colName ? `${dbName}_${colName}_dump.json` : `${dbName}_dump.json`;
 
-        return new NextResponse(EJSON.stringify(dump, { relaxed: false }), {
+        // Using relaxed: true makes it much more compatible with other JSON parsers
+        // while still preserving MongoDB types in a standard way
+        return new NextResponse(EJSON.stringify(dump, { relaxed: true }), {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
