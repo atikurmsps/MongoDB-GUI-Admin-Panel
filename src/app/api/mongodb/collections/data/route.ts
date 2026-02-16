@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { ObjectId } from 'mongodb';
+import { EJSON } from 'bson';
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
             .toArray();
 
         return NextResponse.json({
-            data,
+            data: EJSON.serialize(data),
             total: count,
             page,
             limit
