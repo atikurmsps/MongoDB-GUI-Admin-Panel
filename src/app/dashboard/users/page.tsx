@@ -67,7 +67,7 @@ export default function UsersPage() {
     return (
         <div className="min-h-screen bg-[#f3f3f3]">
             <Sidebar />
-            <div className="pl-64">
+            <div className="pl-60">
                 <Topbar />
                 <main className="p-6">
                     <div className="flex items-center justify-between mb-6 border-b border-gray-300 pb-4">

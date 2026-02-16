@@ -87,45 +87,47 @@ export default function Sidebar() {
                     <Link2 className="h-3.5 w-3.5 text-gray-400" />
                     Connection Tester
                 </Link>
-                <div className="mt-1 flex flex-col">
-                    {databases.map((db) => (
-                        <div key={db.name}>
-                            <div className="flex items-center hover:bg-white/50">
-                                <button
-                                    onClick={() => toggleExpand(db.name)}
-                                    className="p-1 text-gray-500"
-                                >
-                                    {db.expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                                </button>
-                                <Link
-                                    href={`/dashboard/db/${db.name}`}
-                                    className={`flex flex-1 items-center gap-1.5 py-1 pr-2 text-[11px] font-medium transition-colors ${pathname.includes(`/db/${db.name}`) ? 'bg-white font-bold text-blue-700' : 'text-gray-700'
-                                        }`}
-                                >
-                                    <Database className="h-3 w-3 text-gray-400" />
-                                    {db.name}
-                                </Link>
-                            </div>
-
-                            {db.expanded && (
-                                <div className="ml-5 border-l border-gray-300 pl-1">
-                                    {db.collections?.map((col) => (
-                                        <Link
-                                            key={col.name}
-                                            href={`/dashboard/db/${db.name}/col/${col.name}`}
-                                            className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-gray-600 hover:bg-white"
-                                        >
-                                            <Folder className="h-3 w-3 text-gray-400" />
-                                            {col.name}
-                                        </Link>
-                                    ))}
-                                    {db.collections?.length === 0 && (
-                                        <span className="block px-2 py-1 text-[10px] text-gray-400 italic">No collections</span>
-                                    )}
+                <div className="mt-1 flex flex-col gap-0.5">
+                    {databases.map((db) => {
+                        const isActive = pathname.includes(`/db/${db.name}`);
+                        return (
+                            <div key={db.name} className="group flex flex-col">
+                                <div className={`flex items-center transition-all ${isActive ? 'bg-white shadow-[inset_3px_0_0_0_#2563eb]' : 'hover:bg-gray-200/50'}`}>
+                                    <button
+                                        onClick={() => toggleExpand(db.name)}
+                                        className={`p-1.5 transition-colors ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`}
+                                    >
+                                        {db.expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                    </button>
+                                    <Link
+                                        href={`/dashboard/db/${db.name}`}
+                                        className={`flex flex-1 items-center gap-2 py-1.5 pr-3 text-[11px] transition-colors ${isActive ? 'font-bold text-blue-700' : 'text-gray-700'}`}
+                                    >
+                                        <Database className={`h-3 w-3 ${isActive ? 'text-blue-500' : 'text-gray-400'}`} />
+                                        <span className="truncate">{db.name}</span>
+                                    </Link>
                                 </div>
-                            )}
-                        </div>
-                    ))}
+
+                                {db.expanded && (
+                                    <div className="ml-5 border-l border-gray-300 pl-1">
+                                        {db.collections?.map((col) => (
+                                            <Link
+                                                key={col.name}
+                                                href={`/dashboard/db/${db.name}/col/${col.name}`}
+                                                className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-gray-600 hover:bg-white"
+                                            >
+                                                <Folder className="h-3 w-3 text-gray-400" />
+                                                {col.name}
+                                            </Link>
+                                        ))}
+                                        {db.collections?.length === 0 && (
+                                            <span className="block px-2 py-1 text-[10px] text-gray-400 italic">No collections</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                     <Link
                         href="/dashboard"
                         className="flex items-center gap-1.5 px-2 py-2 text-[11px] text-blue-600 hover:bg-gray-200"

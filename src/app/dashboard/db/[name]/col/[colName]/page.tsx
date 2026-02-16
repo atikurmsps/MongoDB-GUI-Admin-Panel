@@ -78,7 +78,7 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
             <Sidebar />
             <div className="flex flex-1 flex-col ml-60">
                 <Topbar />
-                <main className="p-4 overflow-auto">
+                <main className="p-4 flex-1 overflow-y-auto overflow-x-hidden">
                     <header className="mb-4">
                         <div className="flex items-center gap-2 mb-2 text-[10px]">
                             <Link href={`/dashboard/db/${dbName}`} className="text-blue-600 hover:underline flex items-center gap-1">
