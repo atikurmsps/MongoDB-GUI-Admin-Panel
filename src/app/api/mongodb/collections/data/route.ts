@@ -52,58 +52,59 @@ function processData(data: any): any {
 // Helper to create a query that finds a document by ANY representation of its ID
 function resolveIdQuery(id: any): any {
     const filters: any[] = [];
-
-    // Add original as first candidate
-    filters.push({ _id: id });
-
     let target = id;
 
-    // 1. Try EJSON/JSON parsing if input is a stringified object
-    if (typeof id === 'string' && (id.trim().startsWith('{') || id.trim().startsWith('['))) {
-        try {
-            target = EJSON.parse(id);
-            filters.push({ _id: target });
-        } catch (e) {
+    // 1. Try to "hydrate" the ID if it's currently EJSON or a JSON string
+    if (typeof id === 'string') {
+        const trimmed = id.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
             try {
-                target = JSON.parse(id);
-                filters.push({ _id: target });
-            } catch (e2) { }
+                target = EJSON.parse(trimmed);
+            } catch (e) {
+                try {
+                    target = JSON.parse(trimmed);
+                    // If target is { $oid: "..." }, convert it to real ObjectId
+                    if (target && target.$oid) {
+                        target = new ObjectId(target.$oid);
+                    }
+                } catch (e2) { }
+            }
         }
     }
 
+    // Now 'target' might be a string, an ObjectId, or a plain object ($oid)
+    if (target && typeof target === 'object' && target.$oid) {
+        target = new ObjectId(target.$oid);
+    }
+
+    // Add the hydrated target if it's safe (BSON type or String)
+    if (target instanceof ObjectId || typeof target === 'string') {
+        filters.push({ _id: target });
+    }
+
     try {
-        // 2. String to ObjectId conversion
-        if (typeof target === 'string' && target.length === 24 && ObjectId.isValid(target)) {
+        // 2. Generate variants
+        if (target instanceof ObjectId) {
+            filters.push({ _id: target.toString() });
+        } else if (typeof target === 'string' && target.length === 24 && ObjectId.isValid(target)) {
             filters.push({ _id: new ObjectId(target) });
-        }
-        // 3. Object-based ID variants
-        else if (target && typeof target === 'object') {
-            const t = target as any;
-            // Handle EJSON {$oid: ...}
-            if (t.$oid && ObjectId.isValid(t.$oid)) {
-                const oid = new ObjectId(t.$oid);
-                filters.push({ _id: oid });
-                filters.push({ _id: t.$oid }); // Ensure plain string is also checked
-            }
+        } else if (target && typeof target === 'object' && target.buffer) {
             // Handle corrupted "buffer" object
-            if (t.buffer) {
-                const bytes = Object.values(t.buffer).filter(v => typeof v === 'number');
-                if (bytes.length === 12) {
-                    const hex = Buffer.from(bytes as number[]).toString('hex');
-                    filters.push({ _id: new ObjectId(hex) });
-                    filters.push({ _id: hex });
-                }
+            const bytes = Object.values(target.buffer).filter(v => typeof v === 'number');
+            if (bytes.length === 12) {
+                const hex = Buffer.from(bytes as number[]).toString('hex');
+                filters.push({ _id: new ObjectId(hex) });
+                filters.push({ _id: hex });
             }
         }
     } catch (e) { }
 
-    // 4. Force check for 24-char hex strings if not already included
-    if (typeof id === 'string' && id.length === 24 && ObjectId.isValid(id)) {
-        filters.push({ _id: new ObjectId(id) });
+    // Always include the raw input if it's a simple string
+    if (typeof id === 'string' && !filters.find(f => f._id === id)) {
+        filters.push({ _id: id });
     }
 
-    // 5. IMPORTANT: De-duplicate using EJSON.stringify to distinguish types!
-    // JSON.stringify turns new ObjectId("hex") into just "hex", losing the type.
+    // 3. De-duplicate using EJSON.stringify to distinguish types
     const uniqueFilters = filters.reduce((acc: any[], curr) => {
         const str = EJSON.stringify(curr);
         if (!acc.find(f => EJSON.stringify(f) === str)) {
