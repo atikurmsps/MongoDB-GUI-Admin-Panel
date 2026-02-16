@@ -7,6 +7,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "MongoAdmin - Premium MongoDB Manager",
   description: "A sleek and powerful MongoDB administration panel.",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
