@@ -8,8 +8,9 @@ function processData(data: any): any {
     if (Array.isArray(data)) {
         return data.map(item => processData(item));
     } else if (data !== null && typeof data === 'object') {
+        const val = data as any;
         // If it's already a specialized BSON type, don't recurse
-        if (data._bsontype === 'ObjectID' || data instanceof ObjectId || data instanceof Date) {
+        if (val._bsontype || val instanceof ObjectId || val instanceof Date) {
             return data;
         }
 
@@ -26,6 +27,36 @@ function processData(data: any): any {
         return processed;
     }
     return data;
+}
+
+// Helper to create a query that finds a document by ANY representation of its ID
+function resolveIdQuery(id: any): any {
+    const filters: any[] = [{ _id: id }];
+
+    // 1. Try to add direct string/ObjectId versions
+    try {
+        if (typeof id === 'string' && ObjectId.isValid(id)) {
+            filters.push({ _id: new ObjectId(id) });
+        } else if (id && id.$oid) {
+            const oid = new ObjectId(id.$oid);
+            filters.push({ _id: oid });
+            filters.push({ _id: oid.toString() });
+        }
+    } catch (e) { }
+
+    // 2. If it's the corrupted buffer object, try to extract hex and add variants
+    if (id && typeof id === 'object' && (id as any).buffer) {
+        try {
+            const bytes = Object.values((id as any).buffer).filter(v => typeof v === 'number');
+            if (bytes.length === 12) {
+                const hex = Buffer.from(bytes as number[]).toString('hex');
+                filters.push({ _id: hex });
+                filters.push({ _id: new ObjectId(hex) });
+            }
+        } catch (e) { }
+    }
+
+    return filters.length > 1 ? { $or: filters } : { _id: id };
 }
 
 export async function GET(req: NextRequest) {
@@ -103,17 +134,8 @@ export async function PATCH(req: NextRequest) {
         const { _id, ...updateData } = data;
         const processedUpdateData = processData(updateData);
 
-        let queryId: any = id;
-        try {
-            if (typeof id === 'string' && ObjectId.isValid(id)) {
-                queryId = new ObjectId(id);
-            } else if (id && id.$oid) {
-                queryId = new ObjectId(id.$oid);
-            }
-        } catch (e) { }
-
         const result = await db.collection(collection).updateOne(
-            { $or: [{ _id: queryId }, { _id: id }] },
+            resolveIdQuery(id),
             { $set: processedUpdateData }
         );
 
@@ -133,26 +155,15 @@ export async function DELETE(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const database = searchParams.get('db');
         const collection = searchParams.get('col');
-        const id = searchParams.get('id');
+        const idMatch = searchParams.get('id');
 
-        if (!database || !collection || !id) {
+        if (!database || !collection || !idMatch) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         const db = await getDb(database);
 
-        let queryId: any = id;
-        try {
-            if (typeof id === 'string' && ObjectId.isValid(id)) {
-                queryId = new ObjectId(id);
-            } else if (id && (id as any).$oid) {
-                queryId = new ObjectId((id as any).$oid);
-            }
-        } catch (e) { }
-
-        const result = await db.collection(collection).deleteOne({
-            $or: [{ _id: queryId }, { _id: id }]
-        });
+        const result = await db.collection(collection).deleteOne(resolveIdQuery(idMatch));
 
         if (result.deletedCount === 0) {
             return NextResponse.json({ error: 'Document not found' }, { status: 404 });
