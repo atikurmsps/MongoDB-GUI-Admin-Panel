@@ -5,7 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import ImportModal from '@/components/ImportModal';
 import EditDocumentModal from '@/components/EditDocumentModal';
-import { Table, Search, ChevronLeft, ChevronRight, Loader2, Download, Upload, ArrowLeft, Trash2, Edit, Plus, Copy } from 'lucide-react';
+import { Table, Search, ChevronLeft, ChevronRight, Loader2, Download, Upload, ArrowLeft, Trash2, Edit, Plus, Copy, Wrench } from 'lucide-react';
 import Link from 'next/link';
 
 export default function BrowseCollectionPage({ params }: { params: Promise<{ name: string, colName: string }> }) {
@@ -75,6 +75,30 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
         setEditModalOpen(true);
     };
 
+    const handleRepair = async () => {
+        if (!confirm('This will convert all String-based IDs to official MongoDB ObjectIds. This fixes compatibility with other apps. Proceed?')) return;
+
+        setLoading(true);
+        try {
+            const res = await fetch('/api/mongodb/collections/repair', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ database: dbName, collection: colName }),
+            });
+            const result = await res.json();
+            if (res.ok) {
+                alert(`Success! Repaired ${result.repaired} documents. Your other apps should now work correctly.`);
+                fetchData();
+            } else {
+                alert(result.error || 'Repair failed');
+            }
+        } catch (err) {
+            alert('Repair failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Dynamic columns based on documents
     const allKeys = Array.from(new Set(docs.flatMap(doc => Object.keys(doc))));
     const columns = allKeys.filter(key => key !== '_id');
@@ -113,6 +137,13 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                                 <Download className="h-3.5 w-3.5 text-blue-600" /> Export
                             </button>
                             <ImportModal dbName={dbName} onImported={fetchData} />
+                            <button
+                                onClick={handleRepair}
+                                title="Fix compatibility with other apps by converting String IDs to ObjectIds"
+                                className="flex items-center gap-1.5 bg-yellow-50 px-3 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-100 text-yellow-800"
+                            >
+                                <Wrench className="h-3.5 w-3.5" /> Repair IDs
+                            </button>
                         </div>
                     </header>
 
