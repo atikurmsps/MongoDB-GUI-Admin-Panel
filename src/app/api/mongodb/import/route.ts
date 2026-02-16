@@ -3,6 +3,18 @@ import { getDb } from '@/lib/db';
 import { EJSON } from 'bson';
 import { ObjectId } from 'mongodb';
 
+// Robust check for any BSON-like type to avoid recursing into it
+function isBsonType(val: any): boolean {
+    if (!val || typeof val !== 'object') return false;
+    return (
+        val._bsontype === 'ObjectID' ||
+        val._bsontype === 'ObjectId' ||
+        val instanceof ObjectId ||
+        val instanceof Date ||
+        (val.id && val.toHexString) // Common for various BSON versions
+    );
+}
+
 // Recursive helper to ensure data types are correct and avoid corrupting handled types
 function processData(data: any): any {
     if (Array.isArray(data)) {
@@ -10,7 +22,7 @@ function processData(data: any): any {
     } else if (data !== null && typeof data === 'object') {
         // IMPORTANT: If it's already a specialized MongoDB type (parsed by EJSON), 
         // do NOT recurse into it, or it will be corrupted into a plain object.
-        if (data._bsontype === 'ObjectID' || data instanceof ObjectId || data instanceof Date) {
+        if (isBsonType(data)) {
             return data;
         }
 
@@ -20,7 +32,7 @@ function processData(data: any): any {
 
             // 1. If the value is a string that is a valid 24-char hex ObjectId, convert it.
             // This handles cases where the JSON has plain strings instead of {$oid: ...}.
-            if (typeof value === 'string' && ObjectId.isValid(value) && value.length === 24) {
+            if (typeof value === 'string' && value.length === 24 && ObjectId.isValid(value)) {
                 processed[key] = new ObjectId(value);
             }
             // 2. Otherwise recurse

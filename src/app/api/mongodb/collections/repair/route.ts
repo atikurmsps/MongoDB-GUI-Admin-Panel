@@ -34,9 +34,11 @@ export async function POST(req: NextRequest) {
             // Handle the corrupted "buffer object" pattern
             else if (doc._id && typeof doc._id === 'object' && (doc._id as any).buffer) {
                 try {
-                    // Try to extract the hex string if possible, or convert the buffer
-                    const buf = Buffer.from(Object.values((doc._id as any).buffer) as number[]);
-                    if (buf.length === 12) {
+                    const bufObj = (doc._id as any).buffer;
+                    // It might be { "0": 105, ... } or a real array/buffer
+                    const bytes = Object.values(bufObj).filter(v => typeof v === 'number');
+                    if (bytes.length === 12) {
+                        const buf = Buffer.from(bytes as number[]);
                         potentialId = buf.toString('hex');
                     }
                 } catch (e) { }
