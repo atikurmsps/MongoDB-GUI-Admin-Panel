@@ -24,11 +24,13 @@ export async function GET(req: NextRequest) {
             .limit(limit)
             .toArray();
 
-        return NextResponse.json({
-            data: EJSON.serialize(data),
+        return new NextResponse(EJSON.stringify({
+            data,
             total: count,
             page,
             limit
+        }, { relaxed: true }), {
+            headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
         console.error('Fetch data error:', error);
