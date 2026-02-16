@@ -76,7 +76,7 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
     return (
         <div className="flex min-h-screen bg-[#f3f3f3]">
             <Sidebar />
-            <div className="flex flex-1 flex-col ml-60">
+            <div className="flex flex-1 flex-col ml-60 min-w-0 max-w-full">
                 <Topbar />
                 <main className="p-4 flex-1 overflow-y-auto overflow-x-hidden">
                     <header className="mb-4">
@@ -109,7 +109,7 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                         </div>
                     </header>
 
-                    <div className="pma-panel rounded-sm bg-white overflow-hidden overflow-x-auto min-h-[400px]">
+                    <div className="pma-panel rounded-sm bg-white overflow-x-auto w-full min-h-[400px]">
                         <div className="bg-[#f2f2f2] px-3 py-2 border-b border-gray-300 text-xs font-bold flex justify-between items-center whitespace-nowrap">
                             <div className="flex items-center gap-4">
                                 <span>Showing {docs.length === 0 ? 0 : (page - 1) * 25 + 1} - {(page - 1) * 25 + docs.length} rows. Total: {total}</span>
