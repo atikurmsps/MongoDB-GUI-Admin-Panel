@@ -142,8 +142,9 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                                 >
                                     <Download className="h-3.5 w-3.5 text-blue-600" /> Export
                                 </button>
-                                <ImportModal dbName={dbName} onImported={fetchData} />
+                                <ImportModal dbName={dbName} colName={colName} onImported={fetchData} />
                                 <button
+
                                     onClick={handleRepair}
                                     title="Fix compatibility with other apps by converting String IDs to ObjectIds"
                                     className="flex items-center gap-1.5 bg-yellow-50 px-3 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-100 text-yellow-800"

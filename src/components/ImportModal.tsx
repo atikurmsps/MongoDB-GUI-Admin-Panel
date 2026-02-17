@@ -4,7 +4,7 @@ import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Upload, X, Loader2, AlertCircle } from 'lucide-react';
 
-export default function ImportModal({ dbName, onImported }: { dbName: string, onImported: () => void }) {
+export default function ImportModal({ dbName, colName, onImported }: { dbName: string, colName?: string, onImported: () => void }) {
     const [open, setOpen] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
@@ -24,7 +24,10 @@ export default function ImportModal({ dbName, onImported }: { dbName: string, on
         try {
             const text = await file.text();
 
-            const res = await fetch(`/api/mongodb/import?db=${dbName}`, {
+            let url = `/api/mongodb/import?db=${dbName}`;
+            if (colName) url += `&col=${colName}`;
+
+            const res = await fetch(url, {
                 method: 'POST',
                 body: text,
             });
@@ -35,7 +38,7 @@ export default function ImportModal({ dbName, onImported }: { dbName: string, on
                 onImported();
             } else {
                 const data = await res.json();
-                setError(data.error || 'Failed to import database');
+                setError(data.error || 'Failed to import data');
             }
         } catch (err) {
             setError('Invalid JSON file format');
@@ -55,9 +58,11 @@ export default function ImportModal({ dbName, onImported }: { dbName: string, on
                 <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
                 <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-sm bg-white p-6 shadow-xl border border-gray-400">
                     <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-2">
-                        <Dialog.Title className="text-sm font-bold text-gray-700 uppercase">Import Database</Dialog.Title>
+                        <Dialog.Title className="text-sm font-bold text-gray-700 uppercase">
+                            Import {colName ? 'Collection' : 'Database'}
+                        </Dialog.Title>
                         <Dialog.Description className="sr-only">
-                            Choose a MongoDB dump file in JSON format to import data into the current database.
+                            Choose a MongoDB dump file in JSON format to import data.
                         </Dialog.Description>
                         <Dialog.Close asChild>
                             <button className="text-gray-400 hover:text-gray-900">
@@ -67,7 +72,9 @@ export default function ImportModal({ dbName, onImported }: { dbName: string, on
                     </div>
 
                     <div className="space-y-4">
-                        <p className="text-[11px] text-gray-600">Select a JSON dump file to import into <b>{dbName}</b>.</p>
+                        <p className="text-[11px] text-gray-600">
+                            Select a JSON dump file to import into {colName ? <b>{colName}</b> : <b>{dbName}</b>}.
+                        </p>
 
                         <div className="border-2 border-dashed border-gray-200 p-4 text-center rounded">
                             <input
