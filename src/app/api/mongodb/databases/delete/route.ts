@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthSession } from '@/lib/auth';
 
 export async function DELETE(req: NextRequest) {
     try {
+        const session: any = await getAuthSession();
+        if (!session || session.role !== 'admin') {
+            return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 });
+        }
+
+
         const { name } = await req.json();
 
         if (!name) {
@@ -18,3 +25,4 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to drop database' }, { status: 500 });
     }
 }
+

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import { EJSON } from 'bson';
+import { getAuthSession, hasDatabaseAccess } from '@/lib/auth';
 
 // Recursive helper to ensure data types are correct (ObjectId strings/EJSON -> BSON types)
 function processData(data: any): any {
@@ -130,6 +131,11 @@ export async function GET(req: NextRequest) {
     }
 
     try {
+        const session = await getAuthSession();
+        if (!hasDatabaseAccess(session, dbName)) {
+            return NextResponse.json({ error: 'Database access denied' }, { status: 403 });
+        }
+
         const db = await getDb(dbName);
         const collection = db.collection(colName);
 
@@ -155,9 +161,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
+        const session: any = await getAuthSession();
+        if (!session || session.role === 'viewer') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+
         const { database, collection, data } = await req.json();
         const dbName = (database || '').trim();
         const colName = (collection || '').trim();
+
+        if (!hasDatabaseAccess(session, dbName)) {
+            return NextResponse.json({ error: 'Database access denied' }, { status: 403 });
+        }
 
         if (!dbName || !colName || !data) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -179,9 +194,18 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
     try {
+        const session: any = await getAuthSession();
+        if (!session || session.role === 'viewer') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+
         const { database, collection, id, data } = await req.json();
         const dbName = (database || '').trim();
         const colName = (collection || '').trim();
+
+        if (!hasDatabaseAccess(session, dbName)) {
+            return NextResponse.json({ error: 'Database access denied' }, { status: 403 });
+        }
 
         if (!dbName || !colName || !id || !data) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -210,6 +234,11 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
     try {
+        const session: any = await getAuthSession();
+        if (!session || session.role === 'viewer') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+
         const { searchParams } = new URL(req.url);
         const dbName = (searchParams.get('db') || '').trim();
         const colName = (searchParams.get('col') || '').trim();
@@ -217,6 +246,10 @@ export async function DELETE(req: NextRequest) {
 
         if (!dbName || !colName || !idMatch) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        if (!hasDatabaseAccess(session, dbName)) {
+            return NextResponse.json({ error: 'Database access denied' }, { status: 403 });
         }
 
         const db = await getDb(dbName);

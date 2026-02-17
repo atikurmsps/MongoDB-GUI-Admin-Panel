@@ -18,6 +18,7 @@ export default function DbPage({ params }: { params: Promise<{ name: string }> }
     const { name: dbName } = use(params);
     const [collections, setCollections] = useState<CollectionInfo[]>([]);
     const [loading, setLoading] = useState(true);
+    const [role, setRole] = useState<string | null>(null);
 
     const fetchCollections = async () => {
         try {
@@ -33,6 +34,10 @@ export default function DbPage({ params }: { params: Promise<{ name: string }> }
 
     useEffect(() => {
         fetchCollections();
+        fetch('/api/auth/me')
+            .then(res => res.json())
+            .then(data => setRole(data.role))
+            .catch(() => { });
     }, [dbName]);
 
     const handleExport = async () => {
@@ -67,7 +72,7 @@ export default function DbPage({ params }: { params: Promise<{ name: string }> }
     return (
         <div className="flex min-h-screen bg-[#f3f3f3]">
             <Sidebar />
-            <div className="flex flex-1 flex-col ml-60">
+            <div className="flex flex-1 flex-col ml-60 text-sans">
                 <Topbar />
                 <main className="p-4 overflow-auto">
                     <header className="mb-4">
@@ -79,7 +84,7 @@ export default function DbPage({ params }: { params: Promise<{ name: string }> }
                         <ActionButtons dbName={dbName} onRefresh={fetchCollections} />
                     </header>
 
-                    <div className="pma-panel rounded-sm bg-white overflow-hidden">
+                    <div className="pma-panel rounded-sm bg-white overflow-hidden shadow-sm border border-gray-300">
                         <div className="bg-[#f2f2f2] px-3 py-2 border-b border-gray-300 text-xs font-bold">
                             Structure
                         </div>
@@ -91,8 +96,12 @@ export default function DbPage({ params }: { params: Promise<{ name: string }> }
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold text-center">Rows</th>
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold text-center">Size</th>
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold text-center w-16">Browse</th>
-                                    <th className="px-3 py-2 border-r border-gray-200 font-bold text-center w-16">Empty</th>
-                                    <th className="px-3 py-2 font-bold text-center w-16">Drop</th>
+                                    {role !== 'viewer' && (
+                                        <>
+                                            <th className="px-3 py-2 border-r border-gray-200 font-bold text-center w-16">Empty</th>
+                                            <th className="px-3 py-2 font-bold text-center w-16">Drop</th>
+                                        </>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 italic">
@@ -111,27 +120,31 @@ export default function DbPage({ params }: { params: Promise<{ name: string }> }
                                                 Browse
                                             </Link>
                                         </td>
-                                        <td className="px-3 py-2 border-r border-gray-200 text-center uppercase text-[10px] not-italic">
-                                            <button
-                                                onClick={() => handleAction(col.name, 'empty')}
-                                                className="text-red-600 hover:underline flex items-center justify-center gap-1 mx-auto"
-                                            >
-                                                Empty
-                                            </button>
-                                        </td>
-                                        <td className="px-3 py-2 text-center uppercase text-[10px] not-italic">
-                                            <button
-                                                onClick={() => handleAction(col.name, 'drop')}
-                                                className="text-red-600 hover:underline font-bold flex items-center justify-center gap-1 mx-auto"
-                                            >
-                                                Drop
-                                            </button>
-                                        </td>
+                                        {role !== 'viewer' && (
+                                            <>
+                                                <td className="px-3 py-2 border-r border-gray-200 text-center uppercase text-[10px] not-italic">
+                                                    <button
+                                                        onClick={() => handleAction(col.name, 'empty')}
+                                                        className="text-red-600 hover:underline flex items-center justify-center gap-1 mx-auto"
+                                                    >
+                                                        Empty
+                                                    </button>
+                                                </td>
+                                                <td className="px-3 py-2 text-center uppercase text-[10px] not-italic">
+                                                    <button
+                                                        onClick={() => handleAction(col.name, 'drop')}
+                                                        className="text-red-600 hover:underline font-bold flex items-center justify-center gap-1 mx-auto"
+                                                    >
+                                                        Drop
+                                                    </button>
+                                                </td>
+                                            </>
+                                        )}
                                     </tr>
                                 ))}
                                 {collections.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="p-8 text-center text-gray-400 not-italic">No collections found.</td>
+                                        <td colSpan={role === 'viewer' ? 5 : 7} className="p-8 text-center text-gray-400 not-italic">No collections found.</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -146,3 +159,4 @@ export default function DbPage({ params }: { params: Promise<{ name: string }> }
         </div>
     );
 }
+

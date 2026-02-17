@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Database, Loader2, Lock } from 'lucide-react';
 import * as Label from '@radix-ui/react-label';
@@ -11,6 +11,21 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const router = useRouter();
+    const [verifying, setVerifying] = useState(true);
+
+    useEffect(() => {
+        // Initial check on mount
+        fetch('/api/setup')
+            .then(res => res.json())
+            .then(data => {
+                if (!data.isSetup) {
+                    router.push('/setup');
+                } else {
+                    setVerifying(false);
+                }
+            })
+            .catch(() => setVerifying(false));
+    }, [router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,6 +53,14 @@ export default function LoginPage() {
         }
     };
 
+    if (verifying) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-[#f3f3f3]">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            </div>
+        );
+    }
+
     return (
         <div className="flex min-h-screen items-center justify-center bg-[#f3f3f3] px-4 font-sans">
             <div className="w-full max-w-md bg-white border border-gray-300 rounded-sm shadow-xl overflow-hidden">
@@ -50,7 +73,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="p-8">
-                    
+
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-1.5">
                             <Label.Root htmlFor="username" className="text-[11px] font-bold text-gray-600 uppercase">

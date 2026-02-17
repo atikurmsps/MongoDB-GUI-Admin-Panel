@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthSession, hasDatabaseAccess } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -10,6 +11,11 @@ export async function GET(req: NextRequest) {
     }
 
     try {
+        const session = await getAuthSession();
+        if (!hasDatabaseAccess(session, dbName)) {
+            return NextResponse.json({ error: 'Check database access permissions' }, { status: 403 });
+        }
+
         const db = await getDb(dbName);
         const collections = await db.listCollections().toArray();
 
@@ -35,3 +41,4 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to list collections' }, { status: 500 });
     }
 }
+

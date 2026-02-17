@@ -13,8 +13,16 @@ interface DbInfo {
 
 export default function Sidebar() {
     const [databases, setDatabases] = useState<DbInfo[]>([]);
+    const [role, setRole] = useState<string | null>(null);
     const pathname = usePathname();
     const router = useRouter();
+
+    useEffect(() => {
+        fetch('/api/auth/me')
+            .then(res => res.json())
+            .then(data => setRole(data.role))
+            .catch(() => { });
+    }, []);
 
     const fetchDatabases = async () => {
         try {
@@ -128,15 +136,19 @@ export default function Sidebar() {
                             </div>
                         );
                     })}
-                    <Link
-                        href="/dashboard"
-                        className="flex items-center gap-1.5 px-2 py-2 text-[11px] text-blue-600 hover:bg-gray-200"
-                    >
-                        <Plus className="h-3 w-3" />
-                        New Database
-                    </Link>
+                    {role === 'admin' && (
+                        <Link
+                            href="/dashboard"
+                            className="flex items-center gap-1.5 px-2 py-2 text-[11px] text-blue-600 hover:bg-gray-200"
+                        >
+                            <Plus className="h-3 w-3" />
+                            New Database
+                        </Link>
+                    )}
+
                 </div>
             </div>
         </aside>
+
     );
 }

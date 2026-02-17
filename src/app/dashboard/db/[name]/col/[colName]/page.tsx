@@ -14,6 +14,7 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
+    const [role, setRole] = useState<string | null>(null);
 
     const [editingDoc, setEditingDoc] = useState<any | null>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -34,6 +35,10 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
 
     useEffect(() => {
         fetchData();
+        fetch('/api/auth/me')
+            .then(res => res.json())
+            .then(data => setRole(data.role))
+            .catch(() => { });
     }, [dbName, colName, page]);
 
     const handleExport = () => {
@@ -107,10 +112,9 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
     return (
         <div className="flex min-h-screen bg-[#f3f3f3]">
             <Sidebar />
-            <div className="flex flex-1 flex-col ml-60 min-w-0 max-w-full">
+            <div className="flex flex-1 flex-col ml-60 min-w-0 max-w-full text-sans">
                 <Topbar />
                 <main className="p-4 flex-1 overflow-y-auto overflow-x-hidden">
-                    {/* ... header logic ... */}
                     <header className="mb-4">
                         <div className="flex items-center gap-2 mb-2 text-[10px]">
                             <Link href={`/dashboard/db/${dbName}`} className="text-blue-600 hover:underline flex items-center gap-1">
@@ -121,40 +125,41 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                         </div>
                         <h1 className="text-xl font-normal text-gray-800 border-b border-gray-300 pb-2 mb-4 flex items-center gap-2">
                             <Table className="h-5 w-5 text-gray-500" />
-                            Table: {colName}
+                            Table/Collection: {colName}
                         </h1>
 
-                        <div className="flex gap-2 mb-6">
-                            <button
-                                onClick={handleCreate}
-                                className="flex items-center gap-1.5 bg-gray-200 px-3 py-1 text-xs border border-gray-400 rounded hover:bg-gray-300"
-                            >
-                                <Plus className="h-3.5 w-3.5 text-green-600" /> Insert
-                            </button>
-                            <button
-                                onClick={handleExport}
-                                className="flex items-center gap-1.5 bg-gray-200 px-3 py-1 text-xs border border-gray-400 rounded hover:bg-gray-300"
-                            >
-                                <Download className="h-3.5 w-3.5 text-blue-600" /> Export
-                            </button>
-                            <ImportModal dbName={dbName} onImported={fetchData} />
-                            <button
-                                onClick={handleRepair}
-                                title="Fix compatibility with other apps by converting String IDs to ObjectIds"
-                                className="flex items-center gap-1.5 bg-yellow-50 px-3 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-100 text-yellow-800"
-                            >
-                                <Wrench className="h-3.5 w-3.5" /> Repair IDs
-                            </button>
-                        </div>
+                        {role !== 'viewer' && (
+                            <div className="flex gap-2 mb-6">
+                                <button
+                                    onClick={handleCreate}
+                                    className="flex items-center gap-1.5 bg-gray-200 px-3 py-1 text-xs border border-gray-400 rounded hover:bg-gray-300"
+                                >
+                                    <Plus className="h-3.5 w-3.5 text-green-600" /> Insert
+                                </button>
+                                <button
+                                    onClick={handleExport}
+                                    className="flex items-center gap-1.5 bg-gray-200 px-3 py-1 text-xs border border-gray-400 rounded hover:bg-gray-300"
+                                >
+                                    <Download className="h-3.5 w-3.5 text-blue-600" /> Export
+                                </button>
+                                <ImportModal dbName={dbName} onImported={fetchData} />
+                                <button
+                                    onClick={handleRepair}
+                                    title="Fix compatibility with other apps by converting String IDs to ObjectIds"
+                                    className="flex items-center gap-1.5 bg-yellow-50 px-3 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-100 text-yellow-800"
+                                >
+                                    <Wrench className="h-3.5 w-3.5" /> Repair IDs
+                                </button>
+                            </div>
+                        )}
                     </header>
 
-                    <div className="pma-panel rounded-sm bg-white w-full min-h-[400px] flex flex-col">
+                    <div className="pma-panel rounded-sm bg-white w-full min-h-[400px] flex flex-col shadow-sm border border-gray-300">
                         <div className="bg-[#f2f2f2] px-3 py-2 border-b border-gray-300 text-xs font-bold flex justify-between items-center whitespace-nowrap shrink-0">
                             <div className="flex items-center gap-4">
                                 <span>Showing {docs.length === 0 ? 0 : (page - 1) * 25 + 1} - {(page - 1) * 25 + docs.length} rows. Total: {total}</span>
                                 <button onClick={fetchData} className="text-blue-600 hover:underline font-normal text-[10px]">Refresh</button>
                             </div>
-                            {/* ... pagination logic ... */}
                             <div className="flex items-center gap-2">
                                 <button
                                     disabled={page === 1}
@@ -183,9 +188,13 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                                 <table className="w-full text-[11px] text-left border-collapse whitespace-nowrap">
                                     <thead className="bg-[#fcfcfc] border-b border-gray-200">
                                         <tr>
-                                            <th className="px-3 py-2 w-16 text-center uppercase text-[10px] font-bold border-r border-gray-200">Edit</th>
-                                            <th className="px-3 py-2 w-16 text-center uppercase text-[10px] font-bold border-r border-gray-200">Copy</th>
-                                            <th className="px-3 py-2 w-16 text-center uppercase text-[10px] font-bold border-r border-gray-200">Delete</th>
+                                            {role !== 'viewer' && (
+                                                <>
+                                                    <th className="px-3 py-2 w-16 text-center uppercase text-[10px] font-bold border-r border-gray-200">Edit</th>
+                                                    <th className="px-3 py-2 w-16 text-center uppercase text-[10px] font-bold border-r border-gray-200">Copy</th>
+                                                    <th className="px-3 py-2 w-16 text-center uppercase text-[10px] font-bold border-r border-gray-200">Delete</th>
+                                                </>
+                                            )}
                                             <th className="px-3 py-2 border-r border-gray-200 font-bold text-blue-800">_id</th>
                                             {columns.map(col => (
                                                 <th key={col} className="px-3 py-2 border-r border-gray-200 font-bold text-blue-800">{col}</th>
@@ -195,21 +204,25 @@ export default function BrowseCollectionPage({ params }: { params: Promise<{ nam
                                     <tbody className="divide-y divide-gray-100">
                                         {docs.map((doc, i) => (
                                             <tr key={typeof doc._id === 'object' ? JSON.stringify(doc._id) : (doc._id || i)} className="hover:bg-[#f9f9f9]">
-                                                <td className="px-3 py-2 text-center border-r border-gray-200">
-                                                    <button onClick={() => handleEdit(doc)} className="text-blue-600 hover:underline flex items-center justify-center mx-auto">
-                                                        <Edit className="h-3 w-3" />
-                                                    </button>
-                                                </td>
-                                                <td className="px-3 py-2 text-center border-r border-gray-200">
-                                                    <button onClick={() => handleCopy(doc)} className="text-blue-600 hover:underline flex items-center justify-center mx-auto">
-                                                        <Copy className="h-3 w-3" />
-                                                    </button>
-                                                </td>
-                                                <td className="px-3 py-2 text-center border-r border-gray-200">
-                                                    <button onClick={() => handleDelete(doc._id)} className="text-red-600 hover:underline flex items-center justify-center mx-auto">
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </button>
-                                                </td>
+                                                {role !== 'viewer' && (
+                                                    <>
+                                                        <td className="px-3 py-2 text-center border-r border-gray-200">
+                                                            <button onClick={() => handleEdit(doc)} className="text-blue-600 hover:underline flex items-center justify-center mx-auto">
+                                                                <Edit className="h-3 w-3" />
+                                                            </button>
+                                                        </td>
+                                                        <td className="px-3 py-2 text-center border-r border-gray-200">
+                                                            <button onClick={() => handleCopy(doc)} className="text-blue-600 hover:underline flex items-center justify-center mx-auto">
+                                                                <Copy className="h-3 w-3" />
+                                                            </button>
+                                                        </td>
+                                                        <td className="px-3 py-2 text-center border-r border-gray-200">
+                                                            <button onClick={() => handleDelete(doc._id)} className="text-red-600 hover:underline flex items-center justify-center mx-auto">
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </button>
+                                                        </td>
+                                                    </>
+                                                )}
                                                 <td className="px-3 py-2 border-r border-gray-200 font-mono text-gray-500">
                                                     {typeof doc._id === 'object' ? JSON.stringify(doc._id) : String(doc._id ?? '')}
                                                 </td>

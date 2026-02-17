@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { EJSON } from 'bson';
+import { getAuthSession, hasDatabaseAccess } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -12,7 +13,17 @@ export async function GET(req: NextRequest) {
     }
 
     try {
+        const session: any = await getAuthSession();
+        if (!session || session.role === 'viewer') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+
+        if (!hasDatabaseAccess(session, dbName)) {
+            return NextResponse.json({ error: 'Database access denied' }, { status: 403 });
+        }
+
         const db = await getDb(dbName);
+
         const dump: any = {};
 
         if (colName) {

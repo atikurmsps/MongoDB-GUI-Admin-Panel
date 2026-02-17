@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { ObjectId } from 'mongodb';
+import { getAuthSession, hasDatabaseAccess } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
     try {
+        const session: any = await getAuthSession();
+        if (!session || session.role === 'viewer') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+
         const { database, collection } = await req.json();
 
         if (!database || !collection) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
+        if (!hasDatabaseAccess(session, database)) {
+            return NextResponse.json({ error: 'Database access denied' }, { status: 403 });
+        }
+
         const db = await getDb(database);
+
         const col = db.collection(collection);
 
         // Fetch docs that are strings or objects (ObjectIds are excluded by type check)

@@ -13,6 +13,7 @@ interface DbInfo {
 
 export default function Dashboard() {
     const [databases, setDatabases] = useState<DbInfo[]>([]);
+    const [role, setRole] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [newDbName, setNewDbName] = useState('');
     const [createLoading, setCreateLoading] = useState(false);
@@ -89,44 +90,50 @@ export default function Dashboard() {
 
     useEffect(() => {
         fetchDatabases();
+        fetch('/api/auth/me')
+            .then(res => res.json())
+            .then(data => setRole(data.role))
+            .catch(() => { });
     }, []);
 
     return (
         <div className="flex min-h-screen bg-[#f3f3f3]">
             <Sidebar />
-            <div className="flex flex-1 flex-col ml-60">
+            <div className="flex flex-1 flex-col ml-60 text-sans">
                 <Topbar />
                 <main className="p-4 overflow-auto">
                     <div className="mb-4">
                         <h1 className="text-xl font-normal text-gray-800 border-b border-gray-300 pb-2 mb-4">Databases</h1>
 
-                        <div className="pma-panel rounded-sm mb-6 p-4">
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <Database className="h-4 w-4 text-gray-500" />
-                                        Create database
+                        {role === 'admin' && (
+                            <div className="pma-panel rounded-sm mb-6 p-4">
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <Database className="h-4 w-4 text-gray-500" />
+                                            Create database
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Database name"
+                                            value={newDbName}
+                                            onChange={(e) => setNewDbName(e.target.value)}
+                                            className="border border-gray-300 rounded px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-400"
+                                            onKeyDown={(e) => e.key === 'Enter' && handleCreateDb()}
+                                        />
+                                        <button
+                                            onClick={handleCreateDb}
+                                            disabled={createLoading || !newDbName.trim()}
+                                            className="bg-gray-200 px-3 py-1 text-xs border border-gray-400 rounded hover:bg-gray-300 disabled:opacity-50 flex items-center gap-1"
+                                        >
+                                            {createLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                                            Create
+                                        </button>
                                     </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Database name"
-                                        value={newDbName}
-                                        onChange={(e) => setNewDbName(e.target.value)}
-                                        className="border border-gray-300 rounded px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-blue-400"
-                                        onKeyDown={(e) => e.key === 'Enter' && handleCreateDb()}
-                                    />
-                                    <button
-                                        onClick={handleCreateDb}
-                                        disabled={createLoading || !newDbName.trim()}
-                                        className="bg-gray-200 px-3 py-1 text-xs border border-gray-400 rounded hover:bg-gray-300 disabled:opacity-50 flex items-center gap-1"
-                                    >
-                                        {createLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-                                        Create
-                                    </button>
+                                    {createError && <p className="text-[10px] text-red-600 ml-2">{createError}</p>}
                                 </div>
-                                {createError && <p className="text-[10px] text-red-600 ml-2">{createError}</p>}
                             </div>
-                        </div>
+                        )}
 
                         <div className="pma-panel rounded-sm overflow-hidden text-[#555]">
                             <table className="w-full text-xs text-left border-collapse">
@@ -140,7 +147,7 @@ export default function Dashboard() {
                                         <th className="px-3 py-2 border-r border-gray-300 font-bold">Size</th>
                                         <th className="px-3 py-2 border-r border-gray-300 font-bold text-center w-24">Structure</th>
                                         <th className="px-3 py-2 border-r border-gray-300 font-bold text-center w-24">Privileges</th>
-                                        <th className="px-3 py-2 font-bold text-center w-24">Drop</th>
+                                        {role === 'admin' && <th className="px-3 py-2 font-bold text-center w-24">Drop</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
@@ -166,14 +173,16 @@ export default function Dashboard() {
                                                     Privileges
                                                 </Link>
                                             </td>
-                                            <td className="px-3 py-2 text-center uppercase text-[10px]">
-                                                <button
-                                                    onClick={() => setDeleteDbName(db.name)}
-                                                    className="text-red-700 hover:underline flex items-center justify-center gap-1 mx-auto"
-                                                >
-                                                    <Trash2 className="h-3 w-3" /> Drop
-                                                </button>
-                                            </td>
+                                            {role === 'admin' && (
+                                                <td className="px-3 py-2 text-center uppercase text-[10px]">
+                                                    <button
+                                                        onClick={() => setDeleteDbName(db.name)}
+                                                        className="text-red-700 hover:underline flex items-center justify-center gap-1 mx-auto"
+                                                    >
+                                                        <Trash2 className="h-3 w-3" /> Drop
+                                                    </button>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -187,7 +196,7 @@ export default function Dashboard() {
                     {/* Delete Confirmation Modal */}
                     {deleteDbName && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-400/30 backdrop-blur-[1px]">
-                            <div className="bg-white rounded p-6 max-w-sm w-full shadow-2xl border border-gray-300">
+                            <div className="bg-white rounded p-6 max-w-sm w-full shadow-2xl border border-gray-300 text-sans">
                                 <h2 className="text-lg font-bold mb-4 text-red-600">Drop Database</h2>
                                 <p className="text-sm text-gray-600 mb-6">
                                     Are you sure you want to drop database <strong>{deleteDbName}</strong>? This action cannot be undone.

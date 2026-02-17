@@ -14,6 +14,7 @@ interface UserInfo {
 
 export default function UsersPage() {
     const [users, setUsers] = useState<UserInfo[]>([]);
+    const [role, setRole] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -42,11 +43,17 @@ export default function UsersPage() {
 
     useEffect(() => {
         fetchUsers();
+        fetch('/api/auth/me')
+            .then(res => res.json())
+            .then(data => setRole(data.role))
+            .catch(() => { });
+
         fetch('/api/mongodb/config')
             .then(res => res.json())
             .then(setConfig)
             .catch(() => { });
     }, []);
+
 
     const getPrimaryDb = (user: UserInfo) => {
         return user.roles[0]?.db || 'admin';
@@ -73,15 +80,15 @@ export default function UsersPage() {
                     <div className="flex items-center justify-between mb-6 border-b border-gray-300 pb-4">
                         <div className="flex items-center gap-3 text-gray-800">
                             <Users className="h-6 w-6 text-blue-600" />
-                            <h1 className="text-2xl font-bold tracking-tight">User accounts</h1>
+                            <h1 className="text-2xl font-bold tracking-tight">DB User accounts</h1>
                         </div>
-                        <CreateUserModal onCreated={fetchUsers} />
+                        {role !== 'viewer' && <CreateUserModal onCreated={fetchUsers} />}
                     </div>
 
                     <div className="bg-white border border-gray-300 rounded-sm shadow-sm overflow-hidden">
                         <div className="bg-[#f8f8f8] border-b border-gray-200 px-4 py-2 flex items-center gap-2">
                             <Shield className="h-4 w-4 text-gray-500" />
-                            <span className="text-xs font-bold text-gray-700 uppercase">User accounts overview</span>
+                            <span className="text-xs font-bold text-gray-700 uppercase">DB User accounts overview</span>
                         </div>
                         <table className="w-full text-xs text-left border-collapse">
                             <thead className="bg-[#fcfcfc] border-b border-gray-200">
@@ -91,8 +98,12 @@ export default function UsersPage() {
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold">Database</th>
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold">Privileges</th>
                                     <th className="px-3 py-2 border-r border-gray-200 font-bold">Connection URI</th>
-                                    <th className="px-3 py-2 border-r border-gray-200 font-bold text-center w-20">Edit</th>
-                                    <th className="px-3 py-2 font-bold text-center w-20">Delete</th>
+                                    {role !== 'viewer' && (
+                                        <>
+                                            <th className="px-3 py-2 border-r border-gray-200 font-bold text-center w-20">Edit</th>
+                                            <th className="px-3 py-2 font-bold text-center w-20">Delete</th>
+                                        </>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -146,24 +157,28 @@ export default function UsersPage() {
                                                         )}
                                                     </button>
                                                 </td>
-                                                <td className="px-3 py-2 border-r border-gray-200 text-center">
-                                                    <Link
-                                                        href={`/dashboard/db/${mainDb}/users`}
-                                                        className="text-blue-600 hover:text-blue-800"
-                                                        title="Go to Database User Management"
-                                                    >
-                                                        <Edit className="h-4 w-4 mx-auto" />
-                                                    </Link>
-                                                </td>
-                                                <td className="px-3 py-2 text-center">
-                                                    <Link
-                                                        href={`/dashboard/db/${mainDb}/users`}
-                                                        className="text-red-500 hover:text-red-700"
-                                                        title="Go to Database User Management to Delete"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mx-auto" />
-                                                    </Link>
-                                                </td>
+                                                {role !== 'viewer' && (
+                                                    <>
+                                                        <td className="px-3 py-2 border-r border-gray-200 text-center">
+                                                            <Link
+                                                                href={`/dashboard/db/${mainDb}/users`}
+                                                                className="text-blue-600 hover:text-blue-800"
+                                                                title="Go to Database User Management"
+                                                            >
+                                                                <Edit className="h-4 w-4 mx-auto" />
+                                                            </Link>
+                                                        </td>
+                                                        <td className="px-3 py-2 text-center">
+                                                            <Link
+                                                                href={`/dashboard/db/${mainDb}/users`}
+                                                                className="text-red-500 hover:text-red-700"
+                                                                title="Go to Database User Management to Delete"
+                                                            >
+                                                                <Trash2 className="h-4 w-4 mx-auto" />
+                                                            </Link>
+                                                        </td>
+                                                    </>
+                                                )}
                                             </tr>
                                         );
                                     })

@@ -1,23 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createToken } from '@/lib/auth';
+import { createToken, validateAdminCredentials } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
     try {
         const { username, password } = await req.json();
 
-        const envUsername = process.env.ADMIN_USERNAME;
-        const envPassword = process.env.ADMIN_PASSWORD;
+        const isValid = await validateAdminCredentials(username, password);
 
-        if (!envUsername || !envPassword) {
-            return NextResponse.json({ error: 'Server authentication not configured' }, { status: 500 });
-        }
-
-        if (username !== envUsername || password !== envPassword) {
+        if (!isValid) {
             return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
         }
 
-        const token = await createToken({ username: envUsername });
+        // Determine role and allowed databases
+        let role = 'admin'; // default for env users
+        let allowed_databases = '*';
+        const dbUser = await import('@/lib/sqlite').then(m => m.getUser(username));
+        if (dbUser) {
+            role = dbUser.role;
+            allowed_databases = dbUser.allowed_databases || '*';
+        }
+
+        const token = await createToken({ username, role, allowed_databases });
+
 
         // Set cookie
         const cookieStore = await cookies();
