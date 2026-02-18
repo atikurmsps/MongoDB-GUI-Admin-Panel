@@ -29,6 +29,13 @@ function getDb() {
                 allowed_databases TEXT DEFAULT '*',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER,
+                expires_at INTEGER,
+                data TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            );
         `);
 
         // Migration: Add allowed_databases if it doesn't exist
@@ -91,6 +98,42 @@ export function countUsers(): number {
     const stmt = getDb().prepare('SELECT COUNT(*) as count FROM users');
     const row = stmt.get() as { count: number };
     return row.count;
+}
+
+// Session Management
+export interface SessionRow {
+    id: string;
+    user_id: number;
+    expires_at: number;
+    data?: string;
+}
+
+export function createSession(id: string, userId: number, expiresAt: number, data?: string): void {
+    const stmt = getDb().prepare('INSERT INTO sessions (id, user_id, expires_at, data) VALUES (?, ?, ?, ?)');
+    stmt.run(id, userId, expiresAt, data || null);
+}
+
+export function getSession(id: string): SessionRow | null {
+    const stmt = getDb().prepare('SELECT * FROM sessions WHERE id = ?');
+    const row = stmt.get(id) as SessionRow | undefined;
+    if (!row) return null;
+    return row;
+}
+
+export function updateSessionExpiry(id: string, expiresAt: number): void {
+    const stmt = getDb().prepare('UPDATE sessions SET expires_at = ? WHERE id = ?');
+    stmt.run(expiresAt, id);
+}
+
+export function deleteSession(id: string): void {
+    const stmt = getDb().prepare('DELETE FROM sessions WHERE id = ?');
+    stmt.run(id);
+}
+
+export function cleanupExpiredSessions(): void {
+    const now = Math.floor(Date.now() / 1000);
+    const stmt = getDb().prepare('DELETE FROM sessions WHERE expires_at < ?');
+    stmt.run(now);
 }
 
 

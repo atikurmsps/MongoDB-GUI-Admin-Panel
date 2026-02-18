@@ -6,28 +6,37 @@ const key = new TextEncoder().encode(SECRET_KEY);
 
 export async function middleware(request: NextRequest) {
     const token = request.cookies.get('auth_token')?.value;
+    const { pathname } = request.nextUrl;
 
     // Allow access to setup page
-    if (request.nextUrl.pathname.startsWith('/setup') || request.nextUrl.pathname.startsWith('/api/setup')) {
+    if (pathname.startsWith('/setup') || pathname.startsWith('/api/setup')) {
         return NextResponse.next();
     }
 
-    const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
-        request.nextUrl.pathname.startsWith('/register');
-    const isApiAuthPage = request.nextUrl.pathname.startsWith('/api/auth');
+    const isAuthPage = pathname.startsWith('/login');
+    const isApiAuthPage = pathname.startsWith('/api/auth');
 
+    // If user is on login page and has a token, redirect to dashboard
+    // Note: We can't easily verify the session in the DB from middleware 
+    // without potentially hitting environment issues, so we'll do a basic check here.
+    // The actual verification happens in the pages/APIs.
+    if (isAuthPage && token) {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // If it's an auth page or API, let it through
     if (isAuthPage || isApiAuthPage) {
         return NextResponse.next();
     }
 
+    // Protect all other routes
     if (!token) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // verification happens in server components/pages
     return NextResponse.next();
 }
 
 export const config = {
-    matcher: ['/dashboard/:path*', '/api/mongodb/:path*'],
+    matcher: ['/dashboard/:path*', '/api/mongodb/:path*', '/login'],
 };

@@ -36,15 +36,17 @@ export async function GET() {
         const envUser = process.env.ADMIN_USERNAME;
         const envPass = process.env.ADMIN_PASSWORD;
 
-        const isSetup = !!(envUser && envPass) || userCount > 0;
+        const mongoUri = getSetting('mongodb_uri') || process.env.MONGODB_URI;
+        const jwtSecret = getSetting('jwt_secret') || process.env.JWT_SECRET;
+        const isSetup = (!!(envUser && envPass) || userCount > 0) && !!mongoUri && !!jwtSecret;
 
         // Return existing data to help UI disable fields
         return NextResponse.json({
             isSetup,
             hasUsers: userCount > 0,
             config: {
-                jwtSecret: getSetting('jwt_secret'),
-                mongodbUri: getSetting('mongodb_uri'),
+                jwtSecret: (getSetting('jwt_secret') || process.env.JWT_SECRET) ? '••••••••' : '',
+                mongodbUri: (getSetting('mongodb_uri') || process.env.MONGODB_URI) ? '••••••••' : '',
                 hasEnvMongo: !!process.env.MONGODB_URI,
                 hasEnvJwt: !!process.env.JWT_SECRET
             }

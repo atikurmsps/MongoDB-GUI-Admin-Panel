@@ -32,11 +32,11 @@ export default function SetupPage() {
             .then(data => {
                 setSetupInfo(data);
 
-                // Pre-fill existing config if available
+                // Only pre-fill if they are not masked/already set
                 setFormData(prev => ({
                     ...prev,
-                    jwtSecret: data.config?.jwtSecret || prev.jwtSecret,
-                    mongodbUri: data.config?.mongodbUri || prev.mongodbUri
+                    jwtSecret: (data.config?.jwtSecret && data.config?.jwtSecret !== '••••••••') ? data.config.jwtSecret : prev.jwtSecret,
+                    mongodbUri: (data.config?.mongodbUri && data.config?.mongodbUri !== '••••••••') ? data.config.mongodbUri : prev.mongodbUri
                 }));
 
                 // Only generate secret if one doesn't exist
@@ -104,118 +104,145 @@ export default function SetupPage() {
                     </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    {error && (
-                        <div className="bg-red-50 text-red-600 px-4 py-2 rounded-sm text-sm border border-red-200">
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide flex justify-between">
-                                Admin Username
-                                {setupInfo.hasUsers && <span className="text-[10px] text-orange-500 lowercase font-normal italic">admin already exists</span>}
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    required={!setupInfo.hasUsers}
-                                    disabled={setupInfo.hasUsers}
-                                    value={formData.username}
-                                    onChange={e => setFormData({ ...formData, username: e.target.value })}
-                                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#235a81] focus:ring-1 focus:ring-[#235a81] transition-all disabled:bg-gray-50 disabled:text-gray-400"
-                                    placeholder={setupInfo.hasUsers ? "Admin user exists" : "admin"}
-                                />
+                {(setupInfo as any).isSetup ? (
+                    <div className="p-8 text-center space-y-6">
+                        <div className="flex justify-center">
+                            <div className="bg-green-100 p-3 rounded-full">
+                                <Database className="h-10 w-10 text-green-600" />
                             </div>
                         </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">
-                                Admin Password
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="password"
-                                    required={!setupInfo.hasUsers}
-                                    disabled={setupInfo.hasUsers}
-                                    value={formData.password}
-                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#235a81] focus:ring-1 focus:ring-[#235a81] transition-all disabled:bg-gray-50 disabled:text-gray-400"
-                                    placeholder={setupInfo.hasUsers ? "••••••••" : "••••••••"}
-                                />
-                            </div>
+                        <div className="space-y-2">
+                            <h2 className="text-xl font-bold text-gray-800">System Ready!</h2>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                Your MongoDB Admin Panel has been successfully configured and is ready to use.
+                            </p>
                         </div>
+                        <div className="pt-4">
+                            <button
+                                onClick={() => router.push('/login')}
+                                className="w-full bg-[#235a81] hover:bg-[#1a4461] text-white font-bold py-3 rounded shadow-sm text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2"
+                            >
+                                Go to Login
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400">
+                            To change these settings later, you can use environment variables or update the SQLite database directly.
+                        </p>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                        {error && (
+                            <div className="bg-red-50 text-red-600 px-4 py-2 rounded-sm text-sm border border-red-200">
+                                {error}
+                            </div>
+                        )}
 
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide flex justify-between">
-                                <span>JWT Secret</span>
-                                {setupInfo.config?.hasEnvJwt ?
-                                    <span className="text-[10px] font-normal text-green-600 lowercase italic">loaded from .env</span> :
-                                    (setupInfo.config?.jwtSecret ? <span className="text-[10px] font-normal text-blue-600 lowercase italic">loaded from sqlite</span> : null)
-                                }
-                            </label>
-                            <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                    <Key className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide flex justify-between">
+                                    Admin Username
+                                    {setupInfo.hasUsers && <span className="text-[10px] text-orange-500 lowercase font-normal italic">admin already exists</span>}
+                                </label>
+                                <div className="relative">
+                                    <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                                     <input
                                         type="text"
-                                        required
-                                        disabled={setupInfo.config?.hasEnvJwt || !!setupInfo.config?.jwtSecret}
-                                        value={formData.jwtSecret}
-                                        onChange={e => setFormData({ ...formData, jwtSecret: e.target.value })}
-                                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#235a81] focus:ring-1 focus:ring-[#235a81] font-mono text-xs disabled:bg-gray-50 disabled:text-gray-400"
+                                        required={!setupInfo.hasUsers}
+                                        disabled={setupInfo.hasUsers}
+                                        value={formData.username}
+                                        onChange={e => setFormData({ ...formData, username: e.target.value })}
+                                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#235a81] focus:ring-1 focus:ring-[#235a81] transition-all disabled:bg-gray-50 disabled:text-gray-400"
+                                        placeholder={setupInfo.hasUsers ? "Admin user exists" : "admin"}
                                     />
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={generateSecret}
-                                    disabled={setupInfo.config?.hasEnvJwt || !!setupInfo.config?.jwtSecret}
-                                    className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded border border-gray-300 transition-colors disabled:opacity-50"
-                                    title="Generate Random Secret"
-                                >
-                                    <Wand2 className="h-4 w-4" />
-                                </button>
                             </div>
-                            <p className="text-[10px] text-gray-500 mt-1">Used for signing session tokens. Keep this secure.</p>
-                            {setupInfo.config?.hasEnvJwt && <p className="text-[10px] text-green-600 mt-1 italic">Environment variable is active and cannot be changed here.</p>}
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">
+                                    Admin Password
+                                </label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                    <input
+                                        type="password"
+                                        required={!setupInfo.hasUsers}
+                                        disabled={setupInfo.hasUsers}
+                                        value={formData.password}
+                                        onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#235a81] focus:ring-1 focus:ring-[#235a81] transition-all disabled:bg-gray-50 disabled:text-gray-400"
+                                        placeholder={setupInfo.hasUsers ? "••••••••" : "••••••••"}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide flex justify-between">
+                                    <span>JWT Secret</span>
+                                    {setupInfo.config?.hasEnvJwt ?
+                                        <span className="text-[10px] font-normal text-green-600 lowercase italic">loaded from .env</span> :
+                                        (setupInfo.config?.jwtSecret ? <span className="text-[10px] font-normal text-blue-600 lowercase italic">loaded from sqlite</span> : null)
+                                    }
+                                </label>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <Key className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            required={!setupInfo.config?.hasEnvJwt && !setupInfo.config?.jwtSecret}
+                                            disabled={setupInfo.config?.hasEnvJwt || !!setupInfo.config?.jwtSecret}
+                                            value={formData.jwtSecret || (setupInfo.config?.jwtSecret ? '••••••••' : '')}
+                                            onChange={e => setFormData({ ...formData, jwtSecret: e.target.value })}
+                                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#235a81] focus:ring-1 focus:ring-[#235a81] font-mono text-xs disabled:bg-gray-50 disabled:text-gray-400"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={generateSecret}
+                                        disabled={setupInfo.config?.hasEnvJwt || !!setupInfo.config?.jwtSecret}
+                                        className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded border border-gray-300 transition-colors disabled:opacity-50"
+                                        title="Generate Random Secret"
+                                    >
+                                        <Wand2 className="h-4 w-4" />
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-gray-500 mt-1">Used for signing session tokens. Keep this secure.</p>
+                                {setupInfo.config?.hasEnvJwt && <p className="text-[10px] text-green-600 mt-1 italic">Environment variable is active and cannot be changed here.</p>}
+                            </div>
+
+
+                            <div className="pt-2 border-t border-gray-100">
+                                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide flex justify-between">
+                                    <span>MongoDB URI</span>
+                                    {setupInfo.config?.hasEnvMongo ?
+                                        <span className="text-[10px] font-normal text-green-600 lowercase italic">loaded from .env</span> :
+                                        (setupInfo.config?.mongodbUri ? <span className="text-[10px] font-normal text-blue-600 lowercase italic">loaded from sqlite</span> : <span className="text-[10px] font-normal text-gray-400 lowercase italic">(optional if in env)</span>)
+                                    }
+                                </label>
+                                <div className="relative">
+                                    <Database className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        disabled={setupInfo.config?.hasEnvMongo || !!setupInfo.config?.mongodbUri}
+                                        value={formData.mongodbUri || (setupInfo.config?.mongodbUri ? '••••••••' : '')}
+                                        onChange={e => setFormData({ ...formData, mongodbUri: e.target.value })}
+                                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#235a81] focus:ring-1 focus:ring-[#235a81] transition-all disabled:bg-gray-50 disabled:text-gray-400"
+                                        placeholder="mongodb://localhost:27017"
+                                    />
+                                </div>
+                                {setupInfo.config?.hasEnvMongo && <p className="text-[10px] text-green-600 mt-1 italic">Environment variable is active and cannot be changed here.</p>}
+                            </div>
+
                         </div>
 
-
-                        <div className="pt-2 border-t border-gray-100">
-                            <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide flex justify-between">
-                                <span>MongoDB URI</span>
-                                {setupInfo.config?.hasEnvMongo ?
-                                    <span className="text-[10px] font-normal text-green-600 lowercase italic">loaded from .env</span> :
-                                    (setupInfo.config?.mongodbUri ? <span className="text-[10px] font-normal text-blue-600 lowercase italic">loaded from sqlite</span> : <span className="text-[10px] font-normal text-gray-400 lowercase italic">(optional if in env)</span>)
-                                }
-                            </label>
-                            <div className="relative">
-                                <Database className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    disabled={setupInfo.config?.hasEnvMongo || !!setupInfo.config?.mongodbUri}
-                                    value={formData.mongodbUri}
-                                    onChange={e => setFormData({ ...formData, mongodbUri: e.target.value })}
-                                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#235a81] focus:ring-1 focus:ring-[#235a81] transition-all disabled:bg-gray-50 disabled:text-gray-400"
-                                    placeholder="mongodb://localhost:27017"
-                                />
-                            </div>
-                            {setupInfo.config?.hasEnvMongo && <p className="text-[10px] text-green-600 mt-1 italic">Environment variable is active and cannot be changed here.</p>}
-                        </div>
-
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-[#235a81] hover:bg-[#1a4461] text-white font-bold py-2.5 rounded shadow-sm text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2 disabled:opacity-70"
-                    >
-                        {loading ? <Loader2 className="animate-spin h-4 w-4" /> : 'Complete Setup'}
-                    </button>
-                </form>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-[#235a81] hover:bg-[#1a4461] text-white font-bold py-2.5 rounded shadow-sm text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                        >
+                            {loading ? <Loader2 className="animate-spin h-4 w-4" /> : 'Complete Setup'}
+                        </button>
+                    </form>
+                )}
             </div>
         </div>
     );

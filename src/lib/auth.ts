@@ -1,30 +1,31 @@
-import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
+import { getSetting, getUser, getSession, createSession, updateSessionExpiry, deleteSession, cleanupExpiredSessions } from './sqlite';
+import { v4 as uuidv4 } from 'uuid';
 
-import { getSetting, getUser } from './sqlite';
+export const SESSION_DURATION = 60 * 60; // 1 hour in seconds
 
-function getSecretKey() {
-    // 1. Prioritize Environment Variable
-    if (process.env.JWT_SECRET) {
-        return process.env.JWT_SECRET;
-    }
+export async function createAuthSession(user: any) {
+    const sessionId = uuidv4();
+    const expiresAt = Math.floor(Date.now() / 1000) + SESSION_DURATION;
 
-    try {
-        // 2. Fallback to SQLite Setting
-        const dbSecret = getSetting('jwt_secret');
-        if (dbSecret) return dbSecret;
-    } catch (error) {
-        // Silent catch for build-time or edge cases where SQLite might not be ready
-    }
+    createSession(sessionId, user.id, expiresAt, JSON.stringify({
+        username: user.username,
+        role: user.role,
+        allowed_databases: user.allowed_databases
+    }));
 
-    // 3. Final Fallback (Security Warning: This should be configured in production)
-    return 'fallback-secret-key-don-t-use-this';
+    const cookieStore = await cookies();
+    cookieStore.set('auth_token', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: SESSION_DURATION,
+        path: '/',
+    });
+
+    return sessionId;
 }
-
-
-const getEncodedKey = () => new TextEncoder().encode(getSecretKey());
-
 
 export async function hashPassword(password: string) {
     return await bcrypt.hash(password, 10);
@@ -34,30 +35,48 @@ export async function comparePassword(password: string, hash: string) {
     return await bcrypt.compare(password, hash);
 }
 
-export async function createToken(payload: any) {
-    return await new SignJWT(payload)
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('2h')
-        .sign(getEncodedKey());
-}
+export async function getAuthSession() {
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get('auth_token')?.value;
+    if (!sessionId) return null;
 
-export async function verifyToken(token: string) {
+    const session = getSession(sessionId);
+    if (!session) return null;
+
+    const now = Math.floor(Date.now() / 1000);
+    if (session.expires_at < now) {
+        deleteSession(sessionId);
+        return null;
+    }
+
+    // Rolling expiration: update expiry time on activity
+    const newExpiresAt = now + SESSION_DURATION;
+    updateSessionExpiry(sessionId, newExpiresAt);
+
+    // Update cookie too
+    cookieStore.set('auth_token', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: SESSION_DURATION,
+        path: '/',
+    });
+
     try {
-        const { payload } = await jwtVerify(token, getEncodedKey(), {
-            algorithms: ['HS256'],
-        });
-        return payload;
-    } catch (error) {
+        return JSON.parse(session.data || '{}');
+    } catch (e) {
         return null;
     }
 }
 
-export async function getAuthSession() {
+export async function clearAuthSession() {
     const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-    if (!token) return null;
-    return await verifyToken(token);
+    const sessionId = cookieStore.get('auth_token')?.value;
+    if (sessionId) {
+        deleteSession(sessionId);
+    }
+    cookieStore.delete('auth_token');
+    cleanupExpiredSessions();
 }
 
 export async function validateAdminCredentials(username: string, pass: string) {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createToken, validateAdminCredentials } from '@/lib/auth';
-import { cookies } from 'next/headers';
+import { validateAdminCredentials } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
     try {
@@ -13,26 +12,21 @@ export async function POST(req: NextRequest) {
         }
 
         // Determine role and allowed databases
-        let role = 'admin'; // default for env users
-        let allowed_databases = '*';
+        let userForSession: any = { username, role: 'admin', allowed_databases: '*' };
         const dbUser = await import('@/lib/sqlite').then(m => m.getUser(username));
         if (dbUser) {
-            role = dbUser.role;
-            allowed_databases = dbUser.allowed_databases || '*';
+            userForSession = {
+                id: dbUser.id,
+                username: dbUser.username,
+                role: dbUser.role,
+                allowed_databases: dbUser.allowed_databases || '*'
+            };
+        } else {
+            // For env users, we need a dummy ID or handle them specially
+            userForSession.id = 0;
         }
 
-        const token = await createToken({ username, role, allowed_databases });
-
-
-        // Set cookie
-        const cookieStore = await cookies();
-        cookieStore.set('auth_token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 2, // 2 hours
-            path: '/',
-        });
+        await import('@/lib/auth').then(m => m.createAuthSession(userForSession));
 
         return NextResponse.json({ message: 'Login successful' });
     } catch (error) {
